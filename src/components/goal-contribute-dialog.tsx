@@ -9,6 +9,8 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Progress } from '@/components/ui/progress'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -28,11 +30,18 @@ export function GoalContributeDialog({ goal, open, onOpenChange }: GoalContribut
   if (!goal) return null
 
   const activeGoal = goal
+  const parsedAmount = parseFloat(amount)
+  const previewAdded = !Number.isNaN(parsedAmount) && parsedAmount > 0 ? parsedAmount : 0
+  const previewTotal = activeGoal.current_amount + previewAdded
+  const previewPercent =
+    activeGoal.target_amount > 0
+      ? Math.min(100, Math.round((previewTotal / activeGoal.target_amount) * 100))
+      : 0
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     const numericAmount = parseFloat(amount)
-    if (isNaN(numericAmount) || numericAmount <= 0) {
+    if (Number.isNaN(numericAmount) || numericAmount <= 0) {
       setError('Informe um valor de aporte maior que zero.')
       return
     }
@@ -50,56 +59,91 @@ export function GoalContributeDialog({ goal, open, onOpenChange }: GoalContribut
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <div className="flex items-center gap-2">
-            <div className="h-9 w-9 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
-              <PiggyBank className="h-5 w-5" />
+          <div className="flex items-center gap-3">
+            <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+              <PiggyBank className="size-5" />
             </div>
-            <div>
-              <DialogTitle>Aportar na Meta</DialogTitle>
-              <DialogDescription className="truncate max-w-[300px]">
-                {activeGoal.name}
-              </DialogDescription>
+            <div className="min-w-0">
+              <DialogTitle>Novo Aporte na Meta</DialogTitle>
+              <DialogDescription className="truncate">{activeGoal.name}</DialogDescription>
             </div>
           </div>
         </DialogHeader>
 
-        <div className="bg-muted/50 rounded-lg p-3 text-xs space-y-1">
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">Progresso Atual:</span>
-            <span className="font-medium text-foreground">
-              {formatBRL(activeGoal.current_amount)} de {formatBRL(activeGoal.target_amount)} ({activeGoal.progress_percent}%)
+        <div className="rounded-xl border bg-muted/25 p-3.5 text-xs space-y-2.5 tabular">
+          <div className="flex items-center justify-between">
+            <span className="text-muted-foreground">Acumulado:</span>
+            <span className="font-semibold text-foreground">
+              {formatBRL(previewTotal)} de {formatBRL(activeGoal.target_amount)} ({previewPercent}%)
             </span>
           </div>
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">Falta para Concluir:</span>
-            <span className="font-semibold text-primary">{formatBRL(activeGoal.remaining_amount)}</span>
+          <Progress
+            value={previewPercent}
+            indicatorClassName={previewPercent >= 100 ? 'bg-emerald-500' : 'bg-primary'}
+          />
+          <div className="flex items-center justify-between">
+            <span className="text-muted-foreground">Restante para concluir:</span>
+            <span className="font-semibold text-primary">
+              {formatBRL(Math.max(0, activeGoal.target_amount - previewTotal))}
+            </span>
           </div>
         </div>
 
         {error && (
-          <div className="flex items-center gap-2 rounded-md bg-destructive/15 p-3 text-sm text-destructive">
-            <AlertCircle className="h-4 w-4 shrink-0" />
-            <span>{error}</span>
-          </div>
+          <Alert variant="destructive">
+            <AlertCircle className="size-4" />
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <Label htmlFor="contribute-amount">Valor do Aporte (R$) *</Label>
-            <Input
-              id="contribute-amount"
-              type="number"
-              step="0.01"
-              placeholder="Ex: 250,00"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              autoFocus
-            />
+          <div className="space-y-1.5">
+            <Label htmlFor="contribute-amount">Valor do Aporte *</Label>
+            <div className="relative">
+              <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-muted-foreground">
+                R$
+              </span>
+              <Input
+                id="contribute-amount"
+                type="number"
+                step="0.01"
+                min="0.01"
+                placeholder="0,00"
+                className="pl-9 font-semibold tabular"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                autoFocus
+              />
+            </div>
+
+            {activeGoal.remaining_amount > 0 && (
+              <div className="flex flex-wrap gap-1.5 pt-1">
+                {[100, 250, 500]
+                  .filter((v) => v < activeGoal.remaining_amount)
+                  .map((preset) => (
+                    <button
+                      key={preset}
+                      type="button"
+                      onClick={() => setAmount(String(preset))}
+                      className="rounded-md border bg-muted/40 px-2.5 py-1 text-[11px] font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors cursor-pointer tabular"
+                    >
+                      + {formatBRL(preset)}
+                    </button>
+                  ))}
+                <button
+                  type="button"
+                  onClick={() => setAmount(String(activeGoal.remaining_amount))}
+                  className="rounded-md border border-primary/30 bg-primary/10 px-2.5 py-1 text-[11px] font-medium text-primary hover:bg-primary/15 transition-colors cursor-pointer tabular"
+                >
+                  Completar ({formatBRL(activeGoal.remaining_amount)})
+                </button>
+              </div>
+            )}
           </div>
 
-          <DialogFooter className="pt-2">
+          <DialogFooter>
             <Button
               type="button"
               variant="outline"
@@ -108,10 +152,10 @@ export function GoalContributeDialog({ goal, open, onOpenChange }: GoalContribut
             >
               Cancelar
             </Button>
-            <Button type="submit" disabled={isContributing} className="bg-emerald-600 hover:bg-emerald-700">
+            <Button type="submit" disabled={isContributing}>
               {isContributing ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <Loader2 className="mr-2 size-4 animate-spin" />
                   Aportando...
                 </>
               ) : (

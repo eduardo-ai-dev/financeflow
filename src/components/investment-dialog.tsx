@@ -135,13 +135,13 @@ export function InvestmentDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleDialogChange}>
-      <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             {isEditing ? 'Editar Posição de Investimento' : 'Novo Ativo na Carteira'}
           </DialogTitle>
           <DialogDescription>
-            Cadastre ativos de renda fixa, ações, FIIs ou fundos sem misturar com despesas de consumo.
+            Cadastre ativos de renda fixa, ações, fundos imobiliários ou reserva financeira.
           </DialogDescription>
         </DialogHeader>
 

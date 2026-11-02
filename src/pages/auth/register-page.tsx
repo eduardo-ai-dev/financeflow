@@ -50,7 +50,7 @@ export function RegisterPage() {
       if (result.error.message.includes('User already registered')) {
         setServerError('Este e-mail já está cadastrado. Tente entrar.')
       } else if (result.error.message.includes('rate limit')) {
-        setServerError('Limite de envio de e-mails atingido temporariamente pelo Supabase. Aguarde alguns minutos ou desative a opção "Confirm email" no painel do Supabase para cadastro imediato.')
+        setServerError('Muitas tentativas recentes de envio de e-mail. Aguarde alguns minutos e tente novamente.')
       } else if (result.error.message.toLowerCase().includes('password')) {
         setServerError('A senha não atende à política de segurança do servidor. Use uma senha forte e tente novamente.')
       } else {

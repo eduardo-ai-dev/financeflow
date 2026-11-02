@@ -92,7 +92,7 @@ export function InvestmentTransactionDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleDialogChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <div className="flex items-center gap-2">
             <div className="h-9 w-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
@@ -212,7 +212,7 @@ export function InvestmentTransactionDialog({
                 ))}
               </select>
               <p className="text-[11px] text-muted-foreground mt-1">
-                Conforme a Regra 4, essa movimentação ajusta o caixa livre sem gerar distorções de consumo no orçamento.
+                O saldo da conta selecionada será ajustado automaticamente sem afetar suas despesas do mês.
               </p>
             </div>
           )}

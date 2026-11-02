@@ -3,6 +3,7 @@ import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { goalSchema, goalPriorities, type GoalFormData } from '@/lib/validations/goal'
 import { useGoals, type GoalWithStats } from '@/hooks/use-goals'
+import { formatBRL } from '@/lib/money'
 import {
   Dialog,
   DialogContent,
@@ -11,10 +12,19 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog'
+import {
+  Form,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormControl,
+  FormMessage,
+} from '@/components/ui/form'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Progress } from '@/components/ui/progress'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { AlertCircle, Loader2 } from 'lucide-react'
+import { AlertCircle, Loader2, Target, ShoppingBag } from 'lucide-react'
 
 interface GoalDialogProps {
   open: boolean
@@ -22,6 +32,16 @@ interface GoalDialogProps {
   goalToEdit?: GoalWithStats | null
   defaultStatus?: 'planned' | 'in_progress'
 }
+
+const STATUS_OPTIONS: Array<{
+  value: GoalFormData['status']
+  label: string
+}> = [
+  { value: 'planned', label: 'Wishlist' },
+  { value: 'in_progress', label: 'Em Poupança' },
+  { value: 'completed', label: 'Concluída' },
+  { value: 'canceled', label: 'Cancelada' },
+]
 
 export function GoalDialog({
   open,
@@ -33,30 +53,37 @@ export function GoalDialog({
   const [serverError, setServerError] = useState<string | null>(null)
   const isEditing = !!goalToEdit
 
-  const {
-    register,
-    handleSubmit,
-    setValue,
-    control,
-    reset,
-    formState: { errors, isSubmitting },
-  } = useForm<GoalFormData>({
+  const form = useForm<GoalFormData>({
     resolver: zodResolver(goalSchema),
     defaultValues: {
       name: '',
       brand: '',
       priority: 'medium',
-      target_amount: 0,
+      target_amount: undefined as unknown as number,
       current_amount: 0,
-      target_date: null,
+      target_date: '',
       status: defaultStatus,
       image_url: '',
       notes: '',
     },
   })
 
-  const selectedPriority = useWatch({ control, name: 'priority', defaultValue: 'medium' })
-  const selectedStatus = useWatch({ control, name: 'status', defaultValue: defaultStatus })
+  const {
+    handleSubmit,
+    control,
+    reset,
+    formState: { isSubmitting },
+  } = form
+
+  const watchedTarget = useWatch({ control, name: 'target_amount' })
+  const watchedCurrent = useWatch({ control, name: 'current_amount' })
+  const watchedStatus = useWatch({ control, name: 'status', defaultValue: defaultStatus })
+
+  const safeTarget = Number.isFinite(watchedTarget) && watchedTarget > 0 ? watchedTarget : 0
+  const safeCurrent = Number.isFinite(watchedCurrent) && watchedCurrent > 0 ? watchedCurrent : 0
+  const previewPercent =
+    safeTarget > 0 ? Math.min(100, Math.round((safeCurrent / safeTarget) * 100)) : 0
+  const previewRemaining = Math.max(0, safeTarget - safeCurrent)
 
   useEffect(() => {
     if (goalToEdit) {
@@ -66,7 +93,7 @@ export function GoalDialog({
         priority: goalToEdit.priority,
         target_amount: goalToEdit.target_amount,
         current_amount: goalToEdit.current_amount,
-        target_date: goalToEdit.target_date || null,
+        target_date: goalToEdit.target_date || '',
         status: goalToEdit.status,
         image_url: goalToEdit.image_url || '',
         notes: goalToEdit.notes || '',
@@ -76,9 +103,9 @@ export function GoalDialog({
         name: '',
         brand: '',
         priority: 'medium',
-        target_amount: 0,
+        target_amount: undefined as unknown as number,
         current_amount: 0,
-        target_date: null,
+        target_date: '',
         status: defaultStatus,
         image_url: '',
         notes: '',
@@ -111,177 +138,319 @@ export function GoalDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleDialogChange}>
-      <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>
-            {isEditing ? 'Editar Meta / Item da Wishlist' : 'Nova Meta / Desejo de Compra'}
-          </DialogTitle>
-          <DialogDescription>
-            Defina o objetivo, valor alvo, prioridade e acompanhe o progresso de acumulação até a compra.
-          </DialogDescription>
+          <div className="flex items-center gap-3">
+            <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+              {watchedStatus === 'planned' ? (
+                <ShoppingBag className="size-5" />
+              ) : (
+                <Target className="size-5" />
+              )}
+            </div>
+            <div>
+              <DialogTitle>
+                {isEditing
+                  ? 'Editar Meta Financeira'
+                  : watchedStatus === 'planned'
+                  ? 'Novo Desejo na Wishlist'
+                  : 'Nova Meta Financeira'}
+              </DialogTitle>
+              <DialogDescription>
+                Defina o valor objetivo, prazo e prioridade para acompanhar sua evolução.
+              </DialogDescription>
+            </div>
+          </div>
         </DialogHeader>
 
         {serverError && (
-          <div className="flex items-center gap-2 rounded-md bg-destructive/15 p-3 text-sm text-destructive">
-            <AlertCircle className="h-4 w-4 shrink-0" />
-            <span>{serverError}</span>
-          </div>
+          <Alert variant="destructive">
+            <AlertCircle className="size-4" />
+            <AlertDescription>{serverError}</AlertDescription>
+          </Alert>
         )}
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <div>
-            <Label htmlFor="goal-name">Nome do Objetivo ou Item *</Label>
-            <Input
-              id="goal-name"
-              placeholder="Ex: Reserva de Emergência, MacBook Pro M3, Viagem Japão"
-              {...register('name')}
-            />
-            {errors.name && <p className="mt-1 text-xs text-destructive">{errors.name.message}</p>}
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="goal-brand">Marca / Fornecedor (Opcional)</Label>
-              <Input
-                id="goal-brand"
-                placeholder="Ex: Apple, Sony, Dell, CVC"
-                {...register('brand')}
-              />
-            </div>
-            <div>
-              <Label htmlFor="goal-target-date">Data Alvo Prevista</Label>
-              <Input
-                id="goal-target-date"
-                type="date"
-                {...register('target_date')}
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="target_amount">Valor Alvo (R$) *</Label>
-              <Input
-                id="target_amount"
-                type="number"
-                step="0.01"
-                placeholder="0.00"
-                {...register('target_amount', { valueAsNumber: true })}
-              />
-              {errors.target_amount && (
-                <p className="mt-1 text-xs text-destructive">{errors.target_amount.message}</p>
+        <Form {...form}>
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            {/* Nome do Objetivo */}
+            <FormField
+              control={control}
+              name="name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Nome do Objetivo ou Bem *</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="Ex.: Reserva de Emergência, MacBook Pro, Viagem..."
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
               )}
-            </div>
+            />
 
-            <div>
-              <Label htmlFor="current_amount">Valor Já Guardado (R$)</Label>
-              <Input
-                id="current_amount"
-                type="number"
-                step="0.01"
-                placeholder="0.00"
-                {...register('current_amount', { valueAsNumber: true })}
+            {/* Valores Monetários */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
+              <FormField
+                control={control}
+                name="target_amount"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Valor Alvo *</FormLabel>
+                    <FormControl>
+                      <div className="relative">
+                        <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-muted-foreground">
+                          R$
+                        </span>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          min="0.01"
+                          placeholder="0,00"
+                          className="pl-9 font-semibold tabular"
+                          value={
+                            field.value === undefined || Number.isNaN(field.value)
+                              ? ''
+                              : field.value
+                          }
+                          onChange={(e) => {
+                            const raw = e.target.value
+                            field.onChange(raw === '' ? Number.NaN : Number(raw))
+                          }}
+                        />
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-              {errors.current_amount && (
-                <p className="mt-1 text-xs text-destructive">{errors.current_amount.message}</p>
-              )}
+
+              <FormField
+                control={control}
+                name="current_amount"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Valor Já Guardado</FormLabel>
+                    <FormControl>
+                      <div className="relative">
+                        <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-muted-foreground">
+                          R$
+                        </span>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          placeholder="0,00"
+                          className="pl-9 tabular"
+                          value={
+                            field.value === undefined ||
+                            Number.isNaN(field.value) ||
+                            (!isEditing && field.value === 0)
+                              ? ''
+                              : field.value
+                          }
+                          onChange={(e) => {
+                            const raw = e.target.value
+                            field.onChange(raw === '' ? 0 : Number(raw))
+                          }}
+                        />
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             </div>
-          </div>
 
-          <div>
-            <Label>Prioridade</Label>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-1.5">
-              {goalPriorities.map((p) => {
-                const isSelected = selectedPriority === p.value
-                return (
-                  <button
-                    key={p.value}
-                    type="button"
-                    onClick={() => setValue('priority', p.value)}
-                    className={`px-3 py-2 text-xs font-medium rounded-md border text-center transition-all ${
-                      isSelected
-                        ? 'border-primary bg-primary/10 text-primary font-semibold ring-1 ring-primary'
-                        : 'border-border bg-card text-muted-foreground hover:bg-accent'
-                    }`}
-                  >
-                    {p.label}
-                  </button>
-                )
-              })}
+            {/* Prévia ao vivo do Progresso */}
+            {safeTarget > 0 && (
+              <div className="rounded-xl border bg-muted/25 px-3.5 py-3 space-y-2 tabular">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-medium text-foreground">
+                    Progresso inicial: <strong className="text-primary">{previewPercent}%</strong>
+                  </span>
+                  <span className="text-muted-foreground">
+                    {previewRemaining > 0
+                      ? `Faltam ${formatBRL(previewRemaining)}`
+                      : 'Meta 100% alcançada'}
+                  </span>
+                </div>
+                <Progress
+                  value={previewPercent}
+                  indicatorClassName={previewPercent >= 100 ? 'bg-emerald-500' : 'bg-primary'}
+                />
+              </div>
+            )}
+
+            {/* Marca e Data Alvo */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
+              <FormField
+                control={control}
+                name="brand"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Marca ou Instituição</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="Ex.: Apple, Tesouro Direto, CVC"
+                        value={field.value ?? ''}
+                        onChange={field.onChange}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={control}
+                name="target_date"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Data Prevista</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="date"
+                        value={field.value ?? ''}
+                        onChange={field.onChange}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             </div>
-          </div>
 
-          <div>
-            <Label>Status</Label>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-1.5">
-              {[
-                { value: 'planned', label: 'Wishlist (Planejado)' },
-                { value: 'in_progress', label: 'Em Poupança' },
-                { value: 'completed', label: 'Concluído' },
-                { value: 'canceled', label: 'Cancelado' },
-              ].map((s) => {
-                const isSelected = selectedStatus === s.value
-                return (
-                  <button
-                    key={s.value}
-                    type="button"
-                    onClick={() => setValue('status', s.value as GoalFormData['status'])}
-                    className={`px-3 py-2 text-xs font-medium rounded-md border text-center transition-all ${
-                      isSelected
-                        ? 'border-primary bg-primary/10 text-primary font-semibold'
-                        : 'border-border bg-card text-muted-foreground hover:bg-accent'
-                    }`}
-                  >
-                    {s.label}
-                  </button>
-                )
-              })}
+            {/* Prioridade e Status */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <FormField
+                control={control}
+                name="priority"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Prioridade</FormLabel>
+                    <div className="grid grid-cols-2 gap-2">
+                      {goalPriorities.map((p) => {
+                        const isSelected = field.value === p.value
+                        return (
+                          <button
+                            key={p.value}
+                            type="button"
+                            onClick={() => field.onChange(p.value)}
+                            className={`h-9 px-3 text-xs font-medium rounded-lg border text-center transition-all cursor-pointer truncate ${
+                              isSelected
+                                ? 'border-primary bg-primary/12 text-primary font-semibold ring-1 ring-primary/40'
+                                : 'border-border bg-background/60 text-muted-foreground hover:bg-muted/60 hover:text-foreground'
+                            }`}
+                          >
+                            {p.label}
+                          </button>
+                        )
+                      })}
+                    </div>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={control}
+                name="status"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Estágio da Meta</FormLabel>
+                    <div className="grid grid-cols-2 gap-2">
+                      {STATUS_OPTIONS.map((s) => {
+                        const isSelected = field.value === s.value
+                        return (
+                          <button
+                            key={s.value}
+                            type="button"
+                            onClick={() => field.onChange(s.value)}
+                            className={`h-9 px-3 text-xs font-medium rounded-lg border text-center transition-all cursor-pointer truncate ${
+                              isSelected
+                                ? 'border-primary bg-primary/12 text-primary font-semibold ring-1 ring-primary/40'
+                                : 'border-border bg-background/60 text-muted-foreground hover:bg-muted/60 hover:text-foreground'
+                            }`}
+                          >
+                            {s.label}
+                          </button>
+                        )
+                      })}
+                    </div>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             </div>
-          </div>
 
-          <div>
-            <Label htmlFor="goal-image">Link da Imagem ou URL do Produto</Label>
-            <Input
-              id="goal-image"
-              placeholder="https://..."
-              {...register('image_url')}
-            />
-          </div>
+            {/* URL da Imagem & Observações */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start pt-1 border-t">
+              <FormField
+                control={control}
+                name="image_url"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Foto de Inspiração (URL opcional)</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="https://..."
+                        value={field.value ?? ''}
+                        onChange={field.onChange}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-          <div>
-            <Label htmlFor="goal-notes">Observações / Links</Label>
-            <Input
-              id="goal-notes"
-              placeholder="Especificações, cupons, lojas consultadas..."
-              {...register('notes')}
-            />
-          </div>
+              <FormField
+                control={control}
+                name="notes"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Observações</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="Links, especificações ou anotações..."
+                        value={field.value ?? ''}
+                        onChange={field.onChange}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
-          <DialogFooter className="pt-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => handleDialogChange(false)}
-              disabled={isSubmitting}
-            >
-              Cancelar
-            </Button>
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Salvando...
-                </>
-              ) : isEditing ? (
-                'Salvar Alterações'
-              ) : (
-                'Criar Meta'
-              )}
-            </Button>
-          </DialogFooter>
-        </form>
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => handleDialogChange(false)}
+                disabled={isSubmitting}
+              >
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 size-4 animate-spin" />
+                    Salvando...
+                  </>
+                ) : isEditing ? (
+                  'Salvar Alterações'
+                ) : watchedStatus === 'planned' ? (
+                  'Salvar na Wishlist'
+                ) : (
+                  'Criar Meta'
+                )}
+              </Button>
+            </DialogFooter>
+          </form>
+        </Form>
       </DialogContent>
     </Dialog>
   )
 }
-

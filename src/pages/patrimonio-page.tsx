@@ -134,7 +134,7 @@ export default function PatrimonioPage() {
             Balanço Patrimonial
           </h1>
           <p className="text-sm text-muted-foreground mt-0.5">
-            Visão consolidada do seu patrimônio real: Ativos Totais menos Passivos e Obrigações (Regra 1 do README).
+            Visão consolidada do seu patrimônio: Ativos Totais menos Passivos e Obrigações.
           </p>
         </div>
         <div className="flex gap-2">

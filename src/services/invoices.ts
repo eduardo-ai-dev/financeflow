@@ -11,34 +11,37 @@ export interface InvoiceWithTotals extends CardInvoice {
 export async function fetchInvoices(cardId?: string): Promise<InvoiceWithTotals[]> {
   let query = supabase
     .from('card_invoices')
-    .select(
-      `
-      *,
-      card:card_id (*)
-    `
-    )
+    .select('*')
     .order('due_date', { ascending: false })
 
   if (cardId) {
     query = query.eq('card_id', cardId)
   }
 
-  const { data: invoices, error } = await query
-  if (error) throw error
+  const [invRes, cardsRes] = await Promise.all([
+    query,
+    supabase.from('credit_cards').select('*'),
+  ])
+
+  if (invRes.error) throw invRes.error
+  const invoices = (invRes.data || []) as CardInvoice[]
+  const cardsMap = new Map<string, CreditCard>(
+    ((cardsRes.data || []) as CreditCard[]).map((c) => [c.id, c])
+  )
 
   // Busca transações vinculadas às faturas para somar o valor total
-  const invoiceIds = (invoices || []).map((i) => i.id)
-  let txsMap = new Map<string, { totalCents: number; count: number }>()
+  const invoiceIds = invoices.map((i) => i.id)
+  const txsMap = new Map<string, { totalCents: number; count: number }>()
 
   if (invoiceIds.length > 0) {
     const { data: txs, error: txsError } = await supabase
       .from('transactions')
-      .select('invoice_id, amount')
+      .select('invoice_id, amount, status')
       .in('invoice_id', invoiceIds)
 
     if (!txsError && txs) {
       txs.forEach((tx) => {
-        if (!tx.invoice_id) return
+        if (!tx.invoice_id || tx.status === 'canceled') return
         const curr = txsMap.get(tx.invoice_id) || { totalCents: 0, count: 0 }
         txsMap.set(tx.invoice_id, {
           totalCents: sumCents(curr.totalCents, toCents(tx.amount)),
@@ -48,10 +51,11 @@ export async function fetchInvoices(cardId?: string): Promise<InvoiceWithTotals[
     }
   }
 
-  return (invoices || []).map((inv) => {
+  return invoices.map((inv) => {
     const stat = txsMap.get(inv.id) || { totalCents: 0, count: 0 }
     return {
       ...inv,
+      card: cardsMap.get(inv.card_id) ?? null,
       total_amount: fromCents(stat.totalCents),
       transactions_count: stat.count,
     }
@@ -69,22 +73,29 @@ export async function payInvoice(
   // 1. Busca os dados da fatura e cartão
   const { data: invoice, error: invError } = await supabase
     .from('card_invoices')
-    .select('*, card:card_id (*)')
+    .select('*')
     .eq('id', invoiceId)
     .single()
 
   if (invError || !invoice) throw invError || new Error('Fatura não encontrada')
 
+  const { data: cardData } = await supabase
+    .from('credit_cards')
+    .select('name')
+    .eq('id', invoice.card_id)
+    .maybeSingle()
+
   // 2. Calcula o valor total das compras vinculadas
   const { data: txs, error: txsError } = await supabase
     .from('transactions')
-    .select('amount')
+    .select('amount, status')
     .eq('invoice_id', invoiceId)
 
   if (txsError) throw txsError
 
   let totalCents = 0
   ;(txs || []).forEach((t) => {
+    if (t.status === 'canceled') return
     totalCents = sumCents(totalCents, toCents(t.amount))
   })
   const invoiceTotal = fromCents(totalCents)
@@ -93,10 +104,10 @@ export async function payInvoice(
     throw new Error('A fatura não possui valor a ser pago.')
   }
 
-  const cardName = invoice.card?.name || 'Cartão de Crédito'
+  const cardName = cardData?.name || 'Cartão de Crédito'
   const desc = `Pagamento Fatura ${cardName} (${invoice.month}/${invoice.year})`
 
-  // 3. Registra a transação de pagamento de fatura (debita a conta bancária sem gerar duplicidade de consumo - Regra 3)
+  // 3. Registra a transação de pagamento de fatura
   const { data: paymentTx, error: payError } = await supabase
     .from('transactions')
     .insert({
@@ -128,4 +139,3 @@ export async function payInvoice(
 
   return paymentTx as Transaction
 }
-

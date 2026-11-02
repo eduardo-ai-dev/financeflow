@@ -2,6 +2,7 @@ import { supabase } from '@/lib/supabase'
 import { getTodayDateString } from '@/lib/date'
 import type { Transaction, Account, Category } from '@/types/database'
 import type { TransactionFormData } from '@/lib/validations/transaction'
+import { cleanUserNotes } from '@/lib/validations/installment'
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/
@@ -38,14 +39,7 @@ export async function fetchTransactions(
 ): Promise<TransactionWithDetails[]> {
   let query = supabase
     .from('transactions')
-    .select(
-      `
-      *,
-      account:account_id (*),
-      to_account:to_account_id (*),
-      category:category_id (*)
-    `
-    )
+    .select('*')
     .order('due_date', { ascending: false })
     .order('created_at', { ascending: false })
 
@@ -86,10 +80,28 @@ export async function fetchTransactions(
     }
   }
 
-  const { data, error } = await query
-  if (error) throw error
+  const [txRes, accountsRes, categoriesRes] = await Promise.all([
+    query,
+    supabase.from('accounts').select('*'),
+    supabase.from('categories').select('*'),
+  ])
 
-  return (data || []) as TransactionWithDetails[]
+  if (txRes.error) throw txRes.error
+
+  const accountsMap = new Map<string, Account>(
+    ((accountsRes.data || []) as Account[]).map((a) => [a.id, a])
+  )
+  const categoriesMap = new Map<string, Category>(
+    ((categoriesRes.data || []) as Category[]).map((c) => [c.id, c])
+  )
+
+  return ((txRes.data || []) as Transaction[]).map((tx) => ({
+    ...tx,
+    notes: cleanUserNotes(tx.notes),
+    account: tx.account_id ? accountsMap.get(tx.account_id) ?? null : null,
+    to_account: tx.to_account_id ? accountsMap.get(tx.to_account_id) ?? null : null,
+    category: tx.category_id ? categoriesMap.get(tx.category_id) ?? null : null,
+  }))
 }
 
 export async function createTransaction(data: TransactionFormData): Promise<Transaction> {

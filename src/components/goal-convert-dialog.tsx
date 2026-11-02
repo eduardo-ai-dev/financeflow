@@ -12,6 +12,8 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Switch } from '@/components/ui/switch'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -42,7 +44,7 @@ export function GoalConvertDialog({ goal, open, onOpenChange }: GoalConvertDialo
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     const numericPrice = parseFloat(finalPrice)
-    if (isNaN(numericPrice) || numericPrice <= 0) {
+    if (Number.isNaN(numericPrice) || numericPrice <= 0) {
       setError('Informe um valor final válido de compra.')
       return
     }
@@ -62,7 +64,9 @@ export function GoalConvertDialog({ goal, open, onOpenChange }: GoalConvertDialo
         assetType,
         accountId: registerExpense && accountId ? accountId : null,
         categoryId: activeGoal.category_id || null,
-        notes: `Meta concluída: ${activeGoal.name}. Fabricante/Marca: ${activeGoal.brand || 'N/A'}`,
+        notes: `Meta concluída: ${activeGoal.name}${
+          activeGoal.brand ? ` (${activeGoal.brand})` : ''
+        }`,
       })
       onOpenChange(false)
     } catch (err: unknown) {
@@ -73,52 +77,57 @@ export function GoalConvertDialog({ goal, open, onOpenChange }: GoalConvertDialo
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <div className="flex items-center gap-2">
-            <div className="h-9 w-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
-              <Sparkles className="h-5 w-5" />
+          <div className="flex items-center gap-3">
+            <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+              <Sparkles className="size-5" />
             </div>
             <div>
-              <DialogTitle>Comprar e Incorporar ao Patrimônio</DialogTitle>
+              <DialogTitle>Concluir Meta & Incorporar Bem</DialogTitle>
               <DialogDescription>
-                Conclua sua meta e transfira o item automaticamente para o seu Balanço Patrimonial.
+                Registre a aquisição e adicione o bem diretamente ao seu Balanço Patrimonial.
               </DialogDescription>
             </div>
           </div>
         </DialogHeader>
 
         {error && (
-          <div className="flex items-center gap-2 rounded-md bg-destructive/15 p-3 text-sm text-destructive">
-            <AlertCircle className="h-4 w-4 shrink-0" />
-            <span>{error}</span>
-          </div>
+          <Alert variant="destructive">
+            <AlertCircle className="size-4" />
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
+          <div className="space-y-1.5">
             <Label htmlFor="convert-asset-name">Nome do Bem Patrimonial *</Label>
             <Input
               id="convert-asset-name"
               value={assetName}
               onChange={(e) => setAssetName(e.target.value)}
-              placeholder="Ex: MacBook Pro M3 Max"
+              placeholder="Ex.: MacBook Pro M3 Max"
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="convert-final-price">Preço Pago (R$) *</Label>
-              <Input
-                id="convert-final-price"
-                type="number"
-                step="0.01"
-                className="tabular"
-                value={finalPrice}
-                onChange={(e) => setFinalPrice(e.target.value)}
-              />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="convert-final-price">Preço Pago *</Label>
+              <div className="relative">
+                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-muted-foreground">
+                  R$
+                </span>
+                <Input
+                  id="convert-final-price"
+                  type="number"
+                  step="0.01"
+                  className="pl-9 font-semibold tabular"
+                  value={finalPrice}
+                  onChange={(e) => setFinalPrice(e.target.value)}
+                />
+              </div>
             </div>
-            <div>
+            <div className="space-y-1.5">
               <Label htmlFor="convert-purchase-date">Data da Compra *</Label>
               <Input
                 id="convert-purchase-date"
@@ -129,16 +138,16 @@ export function GoalConvertDialog({ goal, open, onOpenChange }: GoalConvertDialo
             </div>
           </div>
 
-          <div>
+          <div className="space-y-1.5">
             <Label htmlFor="convert-asset-type">Classificação Patrimonial</Label>
             <select
               id="convert-asset-type"
-              className="mt-1 flex h-10 w-full rounded-md border border-input bg-background text-foreground px-3 py-2 text-sm shadow-2xs transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
+              className="flex h-9 w-full rounded-md border border-input bg-background text-foreground px-3 py-1 text-sm shadow-2xs transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
               value={assetType}
               onChange={(e) => setAssetType(e.target.value as AssetType)}
             >
               {assetTypes.map((t) => (
-                <option key={t.value} value={t.value} className="bg-popover text-popover-foreground">
+                <option key={t.value} value={t.value}>
                   {t.label}
                 </option>
               ))}
@@ -146,39 +155,35 @@ export function GoalConvertDialog({ goal, open, onOpenChange }: GoalConvertDialo
           </div>
 
           <div className="rounded-xl border p-3.5 space-y-3 bg-muted/20">
-            <div className="flex items-center justify-between">
-              <div>
+            <div className="flex items-center justify-between gap-3">
+              <div className="space-y-0.5">
                 <Label htmlFor="register-expense-toggle" className="font-medium cursor-pointer">
-                  Lançar saída no fluxo de caixa?
+                  Debitar compra de uma conta bancária?
                 </Label>
                 <p className="text-xs text-muted-foreground">
-                  Registra automaticamente a despesa na sua conta bancária
+                  Registra automaticamente a saída na conta selecionada
                 </p>
               </div>
-              <input
+              <Switch
                 id="register-expense-toggle"
-                type="checkbox"
                 checked={registerExpense}
-                onChange={(e) => setRegisterExpense(e.target.checked)}
-                className="h-4 w-4 rounded border-input accent-primary cursor-pointer"
+                onCheckedChange={setRegisterExpense}
               />
             </div>
 
             {registerExpense && (
-              <div>
+              <div className="space-y-1.5 pt-1 border-t border-border/60">
                 <Label htmlFor="convert-account">Conta de Pagamento</Label>
                 <select
                   id="convert-account"
-                  className="mt-1 flex h-10 w-full rounded-md border border-input bg-background text-foreground px-3 py-2 text-sm shadow-2xs transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
+                  className="flex h-9 w-full rounded-md border border-input bg-background text-foreground px-3 py-1 text-sm shadow-2xs transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
                   value={accountId}
                   onChange={(e) => setAccountId(e.target.value)}
                 >
-                  <option value="" className="bg-popover text-popover-foreground">
-                    Selecione a conta de saída...
-                  </option>
+                  <option value="">Selecione a conta de saída...</option>
                   {accounts.map((acc) => (
-                    <option key={acc.id} value={acc.id} className="bg-popover text-popover-foreground">
-                      {acc.name} ({acc.institution || 'Geral'})
+                    <option key={acc.id} value={acc.id}>
+                      {acc.name} ({acc.institution || 'Principal'})
                     </option>
                   ))}
                 </select>
@@ -186,7 +191,7 @@ export function GoalConvertDialog({ goal, open, onOpenChange }: GoalConvertDialo
             )}
           </div>
 
-          <DialogFooter className="pt-2">
+          <DialogFooter>
             <Button
               type="button"
               variant="outline"
@@ -198,13 +203,13 @@ export function GoalConvertDialog({ goal, open, onOpenChange }: GoalConvertDialo
             <Button type="submit" disabled={isConverting} className="gap-2">
               {isConverting ? (
                 <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Convertendo...
+                  <Loader2 className="size-4 animate-spin" />
+                  Concluindo...
                 </>
               ) : (
                 <>
-                  <Building2 className="h-4 w-4" />
-                  Efetivar Compra e Criar Ativo
+                  <Building2 className="size-4" />
+                  Concluir e Criar Bem
                 </>
               )}
             </Button>

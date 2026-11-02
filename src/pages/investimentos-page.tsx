@@ -278,12 +278,6 @@ export default function InvestimentosPage() {
                 ))}
               </div>
             </div>
-
-            <div className="mt-4 pt-3 border-t text-xs text-muted-foreground flex items-center justify-between">
-              <span>
-                Regra 4 ativa: Operações de compra e venda não geram falsos déficits no orçamento.
-              </span>
-            </div>
           </div>
         </div>
       )}

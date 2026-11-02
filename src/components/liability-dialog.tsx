@@ -104,7 +104,7 @@ export function LiabilityDialog({ open, onOpenChange, liabilityToEdit }: Liabili
 
   return (
     <Dialog open={open} onOpenChange={handleDialogChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             {isEditing ? 'Editar Obrigação / Passivo' : 'Nova Obrigação / Dívida'}

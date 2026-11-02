@@ -12,8 +12,6 @@ import {
   Sun,
   Moon,
   Download,
-  ShieldCheck,
-  CheckCircle2,
   LogOut,
   AlertTriangle,
   Loader2,
@@ -29,7 +27,7 @@ export default function ConfiguracoesPage() {
   async function handleExportFullBackup() {
     try {
       setIsExporting(true)
-      setExportMessage('Coletando tabelas financeiras...')
+      setExportMessage('Preparando seus dados financeiros...')
 
       const [
         accounts,
@@ -85,17 +83,17 @@ export default function ConfiguracoesPage() {
       link.href = url
       link.setAttribute(
         'download',
-        `financeflow_backup_completo_${getTodayDateString()}.json`
+        `financeflow_historico_completo_${getTodayDateString()}.json`
       )
       document.body.appendChild(link)
       link.click()
       document.body.removeChild(link)
       URL.revokeObjectURL(url)
 
-      setExportMessage('Backup exportado com sucesso!')
+      setExportMessage('Histórico exportado com sucesso!')
       setTimeout(() => setExportMessage(null), 4000)
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Erro ao gerar backup.'
+      const msg = err instanceof Error ? err.message : 'Erro ao exportar dados.'
       setExportMessage(`Falha: ${msg}`)
     } finally {
       setIsExporting(false)
@@ -104,38 +102,38 @@ export default function ConfiguracoesPage() {
 
   return (
     <div className="space-y-8 max-w-4xl animate-in fade-in-50 duration-200">
-      {/* Top Header */}
+      {/* Cabeçalho */}
       <div className="pb-2 border-b">
         <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
-          Configurações & Soberania
+          Configurações
         </h1>
         <p className="text-sm text-muted-foreground mt-0.5">
-          Perfil de usuário, preferências do sistema, backup integral e auditoria das regras contábeis.
+          Gerencie seu perfil de acesso, preferências visuais e exportação dos seus dados.
         </p>
       </div>
 
       {/* Perfil de Usuário */}
       <div className="rounded-2xl border bg-card p-6 shadow-xs space-y-4">
         <div className="flex items-center gap-2 pb-3 border-b">
-          <User className="h-5 w-5 text-primary" />
-          <h2 className="font-semibold text-base">Perfil de Acesso</h2>
+          <User className="size-5 text-primary" />
+          <h2 className="font-semibold text-base">Meus Dados</h2>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
+          <div className="space-y-1.5">
             <Label htmlFor="user-name">Nome Completo</Label>
-            <Input id="user-name" value={profile?.full_name || 'Usuário FinanceFlow'} disabled />
+            <Input id="user-name" value={profile?.full_name || 'Cliente FinanceFlow'} disabled />
           </div>
-          <div>
-            <Label htmlFor="user-email">E-mail da Conta</Label>
+          <div className="space-y-1.5">
+            <Label htmlFor="user-email">E-mail de Acesso</Label>
             <Input id="user-email" value={user?.email || ''} disabled />
           </div>
-          <div>
-            <Label htmlFor="user-currency">Moeda Padrão</Label>
+          <div className="space-y-1.5">
+            <Label htmlFor="user-currency">Moeda Principal</Label>
             <Input id="user-currency" value="BRL (R$ Real Brasileiro)" disabled />
           </div>
-          <div>
-            <Label htmlFor="user-timezone">Fuso Horário Padrão</Label>
+          <div className="space-y-1.5">
+            <Label htmlFor="user-timezone">Fuso Horário</Label>
             <Input id="user-timezone" value="América/São Paulo (UTC-3)" disabled />
           </div>
         </div>
@@ -144,15 +142,15 @@ export default function ConfiguracoesPage() {
       {/* Tema e Aparência */}
       <div className="rounded-2xl border bg-card p-6 shadow-xs space-y-4">
         <div className="flex items-center gap-2 pb-3 border-b">
-          <Settings className="h-5 w-5 text-primary" />
-          <h2 className="font-semibold text-base">Tema & Interface Visual</h2>
+          <Settings className="size-5 text-primary" />
+          <h2 className="font-semibold text-base">Aparência</h2>
         </div>
 
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
             <p className="text-sm font-medium">Modo de Exibição</p>
             <p className="text-xs text-muted-foreground">
-              Alterne entre o tema claro ou escuro com contraste otimizado para leitura numérica.
+              Alterne entre o tema claro ou escuro com contraste otimizado para leitura financeira.
             </p>
           </div>
 
@@ -163,7 +161,7 @@ export default function ConfiguracoesPage() {
               onClick={() => setTheme('light')}
               className="gap-1.5 text-xs"
             >
-              <Sun className="h-4 w-4" /> Claro
+              <Sun className="size-4" /> Claro
             </Button>
             <Button
               variant={theme === 'dark' ? 'default' : 'outline'}
@@ -171,29 +169,29 @@ export default function ConfiguracoesPage() {
               onClick={() => setTheme('dark')}
               className="gap-1.5 text-xs"
             >
-              <Moon className="h-4 w-4" /> Escuro
+              <Moon className="size-4" /> Escuro
             </Button>
           </div>
         </div>
       </div>
 
-      {/* Backup e Soberania Total dos Dados */}
+      {/* Exportação de Dados */}
       <div className="rounded-2xl border bg-card p-6 shadow-xs space-y-4">
         <div className="flex items-center gap-2 pb-3 border-b">
-          <Download className="h-5 w-5 text-primary" />
+          <Download className="size-5 text-primary" />
           <div>
-            <h2 className="font-semibold text-base">Soberania & Backup Integral de Dados</h2>
+            <h2 className="font-semibold text-base">Portabilidade & Cópia de Segurança</h2>
             <p className="text-xs text-muted-foreground">
-              Você é o único dono dos seus dados. Exporte um snapshot JSON completo de todas as suas contas, transações, investimentos e imóveis.
+              Baixe a qualquer momento uma cópia completa de todas as suas contas, lançamentos, cartões, metas e investimentos.
             </p>
           </div>
         </div>
 
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-muted/20 p-4 rounded-xl">
           <div>
-            <h4 className="font-medium text-sm">Download do Arquivo de Backup (JSON)</h4>
+            <h4 className="font-medium text-sm">Exportar Histórico Completo</h4>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Gera um arquivo padronizado com todas as tabelas do sistema para custódia offline.
+              Salva em seu dispositivo um arquivo completo com todas as suas movimentações e patrimônio.
             </p>
             {exportMessage && (
               <p className="text-xs font-semibold text-primary mt-1.5">{exportMessage}</p>
@@ -208,78 +206,15 @@ export default function ConfiguracoesPage() {
           >
             {isExporting ? (
               <>
-                <Loader2 className="h-4 w-4 animate-spin" />
+                <Loader2 className="size-4 animate-spin" />
                 Exportando...
               </>
             ) : (
               <>
-                <Download className="h-4 w-4" /> Baixar Backup Completo
+                <Download className="size-4" /> Baixar Meus Dados
               </>
             )}
           </Button>
-        </div>
-      </div>
-
-      {/* Checklist de Conformidade com as 7 Regras Inegociáveis */}
-      <div className="rounded-2xl border bg-card p-6 shadow-xs space-y-4">
-        <div className="flex items-center gap-2 pb-3 border-b">
-          <ShieldCheck className="h-5 w-5 text-emerald-500" />
-          <div>
-            <h2 className="font-semibold text-base">Regras Contábeis Inegociáveis (README)</h2>
-            <p className="text-xs text-muted-foreground">
-              Garantias ativas no motor financeiro para integridade patrimonial permanente.
-            </p>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
-          {[
-            {
-              num: 1,
-              title: 'Separação de Caixa, Patrimônio e Objetivos',
-              desc: 'Balanço Patrimonial real com Ativos menos Passivos. Conversão direta de metas em bens patrimoniais.',
-            },
-            {
-              num: 2,
-              title: 'Neutralidade Contábil de Transferências',
-              desc: 'Transferir entre contas bancárias nunca afeta despesas nem receitas totais.',
-            },
-            {
-              num: 3,
-              title: 'Competência vs. Caixa nos Cartões',
-              desc: 'Compras afetam o limite e a fatura; quitar fatura deduz banco sem duplicar o consumo.',
-            },
-            {
-              num: 4,
-              title: 'Aporte em Investimento NÃO é Despesa',
-              desc: 'Investir é transferência de liquidez para ativo; o patrimônio líquido permanece neutro no aporte.',
-            },
-            {
-              num: 5,
-              title: 'Modo Sandbox sem Efeitos Colaterais',
-              desc: 'Simulador de cenários futuros opera em memória pura, sem alterar registros reais.',
-            },
-            {
-              num: 6,
-              title: 'Amortização Extraordinária Imobiliária',
-              desc: 'Cálculo exato de SAC/Price, comparando redução de prazo contra redução de parcela.',
-            },
-            {
-              num: 7,
-              title: 'Zero Dados Fictícios (No Mock Data)',
-              desc: 'Todos os valores e gráficos refletem consultas reais via PostgreSQL e RLS.',
-            },
-          ].map((r) => (
-            <div key={r.num} className="p-3 rounded-xl border bg-muted/10 space-y-1">
-              <div className="flex items-center gap-1.5 font-semibold text-foreground">
-                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
-                <span>
-                  Regra {r.num}: {r.title}
-                </span>
-              </div>
-              <p className="text-muted-foreground pl-5">{r.desc}</p>
-            </div>
-          ))}
         </div>
       </div>
 
@@ -287,14 +222,19 @@ export default function ConfiguracoesPage() {
       <div className="rounded-2xl border border-destructive/20 bg-destructive/5 p-6 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h3 className="font-semibold text-base text-destructive flex items-center gap-2">
-            <AlertTriangle className="h-4 w-4" /> Encerrar Sessão
+            <AlertTriangle className="size-4" /> Encerrar Sessão
           </h3>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Desconecta seu login e limpa tokens e cache de autenticação locais deste navegador.
+            Desconecta sua conta com segurança neste dispositivo.
           </p>
         </div>
-        <Button variant="destructive" size="sm" onClick={() => signOut()} className="gap-2 shrink-0 text-xs">
-          <LogOut className="h-4 w-4" /> Sair da Conta
+        <Button
+          variant="destructive"
+          size="sm"
+          onClick={() => signOut()}
+          className="gap-2 shrink-0 text-xs"
+        >
+          <LogOut className="size-4" /> Sair da Conta
         </Button>
       </div>
     </div>

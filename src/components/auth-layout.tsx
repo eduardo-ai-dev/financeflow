@@ -27,7 +27,7 @@ export function AuthLayout() {
         </div>
 
         <footer className="mt-8 text-center text-xs text-muted-foreground">
-          FinanceFlow &copy; {CURRENT_YEAR} &middot; Seus dados protegidos com criptografia e RLS.
+          FinanceFlow &copy; {CURRENT_YEAR} &middot; Seus dados protegidos com criptografia de ponta.
         </footer>
       </div>
     </div>

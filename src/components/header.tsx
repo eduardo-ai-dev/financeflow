@@ -5,7 +5,7 @@ import { useAuth } from '@/hooks/use-auth'
 import { ThemeToggle } from '@/components/theme-toggle'
 import { TransactionDialog } from '@/components/transaction-dialog'
 import { Button } from '@/components/ui/button'
-import { Menu, LogOut, ShieldCheck, Plus } from 'lucide-react'
+import { Menu, LogOut, Plus } from 'lucide-react'
 
 interface HeaderProps {
   onOpenMobileSidebar: () => void
@@ -48,13 +48,8 @@ export function Header({ onOpenMobileSidebar }: HeaderProps) {
         )}
       </div>
 
-      {/* Right side: RLS badge, Theme toggle, Profile avatar & Logout */}
+      {/* Right side: Quick launch, Theme toggle, Profile avatar & Logout */}
       <div className="flex items-center gap-2.5 sm:gap-3">
-        <div className="hidden md:inline-flex items-center gap-1.5 text-[11px] font-medium text-success bg-success/10 border border-success/20 px-2.5 py-1 rounded-full">
-          <ShieldCheck className="size-3.5" />
-          RLS Ativa
-        </div>
-
         <Button
           size="sm"
           onClick={() => setTransactionDialogOpen(true)}

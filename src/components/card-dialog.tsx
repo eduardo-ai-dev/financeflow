@@ -151,12 +151,8 @@ export function CardDialog({
       const msg = err instanceof Error ? err.message : 'Erro ao salvar cartão'
       if (msg.includes('credit_cards_user_name_key')) {
         setServerError('Você já possui um cartão cadastrado com este nome.')
-      } else if (msg.includes('initial_used_amount')) {
-        setServerError(
-          'O banco de dados ainda não possui o campo de gasto do cartão. Execute a migração 0006_card_initial_usage.sql no Supabase.'
-        )
       } else {
-        setServerError(msg)
+        setServerError('Não foi possível salvar os dados do cartão. Verifique as informações e tente novamente.')
       }
     }
   }

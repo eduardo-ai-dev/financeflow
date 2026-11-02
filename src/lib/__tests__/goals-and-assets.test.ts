@@ -83,6 +83,26 @@ describe('Fase 5 — Validações de Metas e Wishlist', () => {
     }
     expect(goalSchema.safeParse(safeHttpsGoal).success).toBe(true)
   })
+
+  it('converte campos opcionais vazios ("") em null sem falhar na validação de data', () => {
+    const parsed = goalSchema.safeParse({
+      name: 'Viagem Europa',
+      brand: '',
+      priority: 'medium',
+      target_amount: 12000,
+      current_amount: 0,
+      target_date: '',
+      status: 'in_progress',
+      image_url: '',
+      notes: '',
+    })
+    expect(parsed.success).toBe(true)
+    if (parsed.success) {
+      expect(parsed.data.target_date).toBeNull()
+      expect(parsed.data.brand).toBeNull()
+      expect(parsed.data.image_url).toBeNull()
+    }
+  })
 })
 
 describe('Fase 5 — Validações de Ativos Patrimoniais', () => {

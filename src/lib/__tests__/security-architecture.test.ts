@@ -186,3 +186,4 @@ describe('Arquitetura de Segurança Supabase (Regras 1 a 7)', () => {
     })
   })
 })
+

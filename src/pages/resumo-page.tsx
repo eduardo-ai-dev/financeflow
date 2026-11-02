@@ -17,7 +17,6 @@ import {
   Cell,
 } from 'recharts'
 import {
-  TrendingUp,
   PiggyBank,
   ArrowDownLeft,
   ArrowUpRight,
@@ -403,23 +402,6 @@ export default function ResumoPage() {
           </div>
         </div>
       )}
-
-      {/* Regra de Ouro Contábil: Neutralidade das Transferências */}
-      <div className="rounded-2xl border bg-muted/20 p-5 flex items-start gap-3">
-        <div className="p-2 rounded-xl bg-primary/10 text-primary shrink-0 mt-0.5">
-          <TrendingUp className="size-5" />
-        </div>
-        <div className="space-y-1">
-          <h4 className="font-semibold text-sm text-foreground">
-            Princípio da Neutralidade do Fluxo de Caixa (Regra 2)
-          </h4>
-          <p className="text-xs text-muted-foreground leading-relaxed">
-            Transferências entre contas próprias e aportes em investimentos atualizam os saldos bancários
-            em tempo real, mas nunca são contabilizados como receita ou despesa de consumo.
-            Seu fluxo de caixa reflete rigorosamente sua economia real sem distorções contábeis.
-          </p>
-        </div>
-      </div>
     </div>
   )
 }

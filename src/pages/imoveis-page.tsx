@@ -175,8 +175,8 @@ export default function ImoveisPage() {
                   </span>
                 </div>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  {activeProperty.builder ? `${activeProperty.builder} &middot; ` : ''}
-                  {activeProperty.unit ? `Unidade ${activeProperty.unit} &middot; ` : ''}
+                  {activeProperty.builder ? `${activeProperty.builder} · ` : ''}
+                  {activeProperty.unit ? `Unidade ${activeProperty.unit} · ` : ''}
                   Comprado em {formatDate(activeProperty.purchase_date)}
                 </p>
               </div>
@@ -654,22 +654,6 @@ export default function ImoveisPage() {
               )}
             </div>
           )}
-
-          {/* Regra Contábil do Imóvel */}
-          <div className="rounded-2xl border bg-muted/20 p-5 flex items-start gap-3">
-            <div className="p-2 rounded-xl bg-primary/10 text-primary shrink-0 mt-0.5">
-              <Scale className="size-5" />
-            </div>
-            <div className="space-y-1">
-              <h4 className="font-semibold text-sm text-foreground">
-                Regra Contábil Imobiliária (Regra 1 e 6)
-              </h4>
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                Um imóvel de R$ 300.000 com saldo financiado de R$ 240.000 representa R$ 60.000 de Patrimônio Líquido positivo.
-                Toda amortização extraordinária de principal reduz o passivo na mesma proporção, enquanto juros pagos e evolução de obra são despesas financeiras operacionais.
-              </p>
-            </div>
-          </div>
 
           {/* Diálogo de Amortização */}
           <AmortizationDialog

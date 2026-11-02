@@ -3,6 +3,7 @@ import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { assetSchema, assetTypes, type AssetFormData } from '@/lib/validations/asset'
 import { useAssets, type Asset } from '@/hooks/use-assets'
+import { getTodayDateString } from '@/lib/date'
 import {
   Dialog,
   DialogContent,
@@ -11,10 +12,18 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog'
+import {
+  Form,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormControl,
+  FormMessage,
+} from '@/components/ui/form'
+import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { AlertCircle, Loader2 } from 'lucide-react'
+import { AlertCircle, Layers, Loader2 } from 'lucide-react'
 
 interface AssetDialogProps {
   open: boolean
@@ -22,28 +31,13 @@ interface AssetDialogProps {
   assetToEdit?: Asset | null
 }
 
-function getTodayString() {
-  const d = new Date()
-  const year = d.getFullYear()
-  const month = String(d.getMonth() + 1).padStart(2, '0')
-  const day = String(d.getDate()).padStart(2, '0')
-  return `${year}-${month}-${day}`
-}
-
 export function AssetDialog({ open, onOpenChange, assetToEdit }: AssetDialogProps) {
   const { createAsset, updateAsset } = useAssets()
   const [serverError, setServerError] = useState<string | null>(null)
   const isEditing = !!assetToEdit
-  const [todayStr] = useState(() => getTodayString())
+  const [todayStr] = useState(() => getTodayDateString())
 
-  const {
-    register,
-    handleSubmit,
-    setValue,
-    control,
-    reset,
-    formState: { errors, isSubmitting },
-  } = useForm<AssetFormData>({
+  const form = useForm<AssetFormData>({
     resolver: zodResolver(assetSchema),
     defaultValues: {
       name: '',
@@ -54,6 +48,14 @@ export function AssetDialog({ open, onOpenChange, assetToEdit }: AssetDialogProp
       notes: '',
     },
   })
+
+  const {
+    handleSubmit,
+    setValue,
+    control,
+    reset,
+    formState: { isSubmitting },
+  } = form
 
   const selectedType = useWatch({ control, name: 'type', defaultValue: 'electronics' })
 
@@ -106,112 +108,195 @@ export function AssetDialog({ open, onOpenChange, assetToEdit }: AssetDialogProp
 
   return (
     <Dialog open={open} onOpenChange={handleDialogChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{isEditing ? 'Editar Ativo Patrimonial' : 'Novo Ativo Patrimonial'}</DialogTitle>
-          <DialogDescription>
-            Registre bens e ativos físicos ou financeiros para compor o seu Balanço Patrimonial real.
-          </DialogDescription>
+          <div className="flex items-center gap-3">
+            <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+              <Layers className="size-5" />
+            </div>
+            <div>
+              <DialogTitle>
+                {isEditing ? 'Editar Ativo Patrimonial' : 'Novo Ativo Patrimonial'}
+              </DialogTitle>
+              <DialogDescription>
+                Registre veículos, bens ou equipamentos para compor o seu Balanço Patrimonial.
+              </DialogDescription>
+            </div>
+          </div>
         </DialogHeader>
 
         {serverError && (
-          <div className="flex items-center gap-2 rounded-md bg-destructive/15 p-3 text-sm text-destructive">
-            <AlertCircle className="h-4 w-4 shrink-0" />
-            <span>{serverError}</span>
-          </div>
+          <Alert variant="destructive">
+            <AlertCircle className="size-4" />
+            <AlertDescription>{serverError}</AlertDescription>
+          </Alert>
         )}
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <div>
-            <Label htmlFor="asset-name">Nome do Bem / Ativo *</Label>
-            <Input id="asset-name" placeholder="Ex: Honda Civic 2022, MacBook M3 Max" {...register('name')} />
-            {errors.name && <p className="mt-1 text-xs text-destructive">{errors.name.message}</p>}
-          </div>
-
-          <div>
-            <Label htmlFor="asset-type-select">Tipo de Ativo</Label>
-            <select
-              id="asset-type-select"
-              value={selectedType}
-              onChange={(e) => setValue('type', e.target.value as AssetFormData['type'])}
-              className="mt-1 flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-            >
-              {assetTypes.map((t) => (
-                <option key={t.value} value={t.value} className="bg-popover text-popover-foreground">
-                  {t.label}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="asset-acq-value">Valor Pago / Aquisição (R$) *</Label>
-              <Input
-                id="asset-acq-value"
-                type="number"
-                step="0.01"
-                placeholder="0.00"
-                {...register('acquisition_value', { valueAsNumber: true })}
-              />
-              {errors.acquisition_value && (
-                <p className="mt-1 text-xs text-destructive">{errors.acquisition_value.message}</p>
+        <Form {...form}>
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            <FormField
+              control={control}
+              name="name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Nome do Bem ou Ativo *</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Ex.: Honda Civic 2023, MacBook Pro M3" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
               )}
+            />
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
+              <FormItem>
+                <FormLabel htmlFor="asset-type-select">Tipo de Ativo</FormLabel>
+                <select
+                  id="asset-type-select"
+                  value={selectedType}
+                  onChange={(e) => setValue('type', e.target.value as AssetFormData['type'])}
+                  className="flex h-9 w-full rounded-md border border-input bg-background text-foreground px-3 py-1 text-sm shadow-2xs transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  {assetTypes.map((t) => (
+                    <option key={t.value} value={t.value}>
+                      {t.label}
+                    </option>
+                  ))}
+                </select>
+              </FormItem>
+
+              <FormField
+                control={control}
+                name="acquisition_date"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Data de Aquisição *</FormLabel>
+                    <FormControl>
+                      <Input type="date" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             </div>
 
-            <div>
-              <Label htmlFor="asset-cur-value">Valor Atual Estimado (R$) *</Label>
-              <Input
-                id="asset-cur-value"
-                type="number"
-                step="0.01"
-                placeholder="0.00"
-                {...register('current_value', { valueAsNumber: true })}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
+              <FormField
+                control={control}
+                name="acquisition_value"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Valor de Aquisição *</FormLabel>
+                    <FormControl>
+                      <div className="relative">
+                        <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-muted-foreground">
+                          R$
+                        </span>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          placeholder="0,00"
+                          className="pl-9 tabular"
+                          value={
+                            field.value === undefined ||
+                            Number.isNaN(field.value) ||
+                            (!isEditing && field.value === 0)
+                              ? ''
+                              : field.value
+                          }
+                          onChange={(e) => {
+                            const raw = e.target.value
+                            field.onChange(raw === '' ? 0 : Number(raw))
+                          }}
+                        />
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-              {errors.current_value && (
-                <p className="mt-1 text-xs text-destructive">{errors.current_value.message}</p>
-              )}
+
+              <FormField
+                control={control}
+                name="current_value"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Valor Atual Estimado *</FormLabel>
+                    <FormControl>
+                      <div className="relative">
+                        <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-muted-foreground">
+                          R$
+                        </span>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          placeholder="0,00"
+                          className="pl-9 font-semibold tabular"
+                          value={
+                            field.value === undefined ||
+                            Number.isNaN(field.value) ||
+                            (!isEditing && field.value === 0)
+                              ? ''
+                              : field.value
+                          }
+                          onChange={(e) => {
+                            const raw = e.target.value
+                            field.onChange(raw === '' ? 0 : Number(raw))
+                          }}
+                        />
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             </div>
-          </div>
 
-          <div>
-            <Label htmlFor="asset-acq-date">Data de Aquisição *</Label>
-            <Input id="asset-acq-date" type="date" {...register('acquisition_date')} />
-            {errors.acquisition_date && (
-              <p className="mt-1 text-xs text-destructive">{errors.acquisition_date.message}</p>
-            )}
-          </div>
-
-          <div>
-            <Label htmlFor="asset-notes">Observações</Label>
-            <Input id="asset-notes" placeholder="Número de série, apólice, garantia..." {...register('notes')} />
-          </div>
-
-          <DialogFooter className="pt-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => handleDialogChange(false)}
-              disabled={isSubmitting}
-            >
-              Cancelar
-            </Button>
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Salvando...
-                </>
-              ) : isEditing ? (
-                'Salvar Alterações'
-              ) : (
-                'Cadastrar Ativo'
+            <FormField
+              control={control}
+              name="notes"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Observações</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="Número de série, seguradora, garantia..."
+                      value={field.value ?? ''}
+                      onChange={field.onChange}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
               )}
-            </Button>
-          </DialogFooter>
-        </form>
+            />
+
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => handleDialogChange(false)}
+                disabled={isSubmitting}
+              >
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 size-4 animate-spin" />
+                    Salvando...
+                  </>
+                ) : isEditing ? (
+                  'Salvar Alterações'
+                ) : (
+                  'Cadastrar Ativo'
+                )}
+              </Button>
+            </DialogFooter>
+          </form>
+        </Form>
       </DialogContent>
     </Dialog>
   )
 }
-

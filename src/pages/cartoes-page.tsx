@@ -448,9 +448,7 @@ export default function CartoesPage() {
             </div>
 
             <p className="text-xs text-muted-foreground leading-relaxed">
-              <strong>Regra Contábil:</strong> O pagamento debita o saldo da conta bancária
-              selecionada sem gerar nova despesa nas categorias de consumo, pois os lançamentos
-              já foram reconhecidos no momento da compra.
+              O pagamento debita o saldo da conta bancária selecionada e libera o limite do cartão automaticamente.
             </p>
           </div>
 

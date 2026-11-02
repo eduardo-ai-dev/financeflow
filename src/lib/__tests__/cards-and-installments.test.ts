@@ -1,7 +1,12 @@
 import { describe, it, expect } from 'vitest'
 import { toCents, fromCents, sumCents, subtractCents, multiplyCents } from '../money'
 import { creditCardSchema } from '../validations/card'
-import { installmentSchema } from '../validations/installment'
+import {
+  installmentSchema,
+  encodeInstallmentNotes,
+  isIncludedInCardLimit,
+  cleanUserNotes,
+} from '../validations/installment'
 
 describe('Motor de Cartões de Crédito e Parcelamentos (Fase 3)', () => {
   describe('Regra 3: Regime de Competência vs. Caixa nos Cartões', () => {
@@ -141,6 +146,37 @@ describe('Motor de Cartões de Crédito e Parcelamentos (Fase 3)', () => {
       })
 
       expect(valid.success).toBe(true)
+    })
+
+    it('não subtrai novamente do limite disponível quando parcelamento já está contabilizado no limite utilizado', () => {
+      const limitCents = toCents(5000)
+      const initialUsedCents = toCents(1800) // Já informado no cartão pelo usuário
+
+      const encodedNotes = encodeInstallmentNotes('Compra na Amazon', true)
+      expect(isIncludedInCardLimit(encodedNotes)).toBe(true)
+      expect(cleanUserNotes(encodedNotes)).toBe('Compra na Amazon')
+
+      const newPurchaseNotes = encodeInstallmentNotes('Compra nova', false)
+      expect(isIncludedInCardLimit(newPurchaseNotes)).toBe(false)
+      expect(cleanUserNotes(newPurchaseNotes)).toBe('Compra nova')
+
+      const openCardTransactions = [
+        { amount: 1800, notes: encodedNotes }, // Já incluso em initialUsedCents -> ignorado no limite
+        { amount: 400, notes: newPurchaseNotes }, // Nova compra -> consome limite
+      ]
+
+      let openPurchasesCents = 0
+      for (const tx of openCardTransactions) {
+        if (!isIncludedInCardLimit(tx.notes)) {
+          openPurchasesCents = sumCents(openPurchasesCents, toCents(tx.amount))
+        }
+      }
+
+      const usedCents = sumCents(initialUsedCents, openPurchasesCents)
+      const availableCents = subtractCents(limitCents, usedCents)
+
+      expect(fromCents(usedCents)).toBe(2200)
+      expect(fromCents(availableCents)).toBe(2800)
     })
   })
 })

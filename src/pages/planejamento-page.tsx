@@ -9,6 +9,13 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Badge } from '@/components/ui/badge'
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert'
+import {
+  HoverCard,
+  HoverCardTrigger,
+  HoverCardContent,
+} from '@/components/ui/hover-card'
 import {
   Sparkles,
   TrendingUp,
@@ -16,7 +23,10 @@ import {
   Info,
   Calendar,
   Layers,
-  Zap,
+  HelpCircle,
+  Shield,
+  Target,
+  Rocket,
 } from 'lucide-react'
 import {
   ResponsiveContainer,
@@ -28,6 +38,59 @@ import {
   Tooltip,
   Legend,
 } from 'recharts'
+
+type ScenarioPresetKey = 'conservative' | 'realistic' | 'optimistic' | 'custom'
+
+interface ScenarioGuideItem {
+  key: Exclude<ScenarioPresetKey, 'custom'>
+  label: string
+  tagline: string
+  description: string
+  paramsLabel: string
+  incomeAdj: number
+  expenseAdj: number
+  contribution: number
+  returnRate: number
+}
+
+const SCENARIO_PRESETS: ScenarioGuideItem[] = [
+  {
+    key: 'conservative',
+    label: 'Conservador',
+    tagline: 'Foco em proteção e margem de segurança',
+    description:
+      'Considera renda estável sem aumentos, acréscimo preventivo nos gastos mensais para imprevistos, aportes moderados e rentabilidade cautelosa.',
+    paramsLabel: 'Renda 0% · Gastos +R$ 300/mês · Aporte R$ 400 · Retorno 9,0% a.a.',
+    incomeAdj: 0,
+    expenseAdj: 300,
+    contribution: 400,
+    returnRate: 9.0,
+  },
+  {
+    key: 'realistic',
+    label: 'Realista',
+    tagline: 'Equilíbrio saudável e evolução consistente',
+    description:
+      'Projeta crescimento gradual da renda, otimização moderada de despesas recorrentes, disciplina constante de aportes e retorno alinhado ao mercado.',
+    paramsLabel: 'Renda +5% · Gastos -R$ 200/mês · Aporte R$ 1.000 · Retorno 10,5% a.a.',
+    incomeAdj: 5,
+    expenseAdj: -200,
+    contribution: 1000,
+    returnRate: 10.5,
+  },
+  {
+    key: 'optimistic',
+    label: 'Otimista',
+    tagline: 'Aceleração máxima de patrimônio',
+    description:
+      'Simula expansão expressiva de receitas (promoção ou novos negócios), enxugamento forte de custos fixos, aportes elevados e carteira com maior retorno.',
+    paramsLabel: 'Renda +20% · Gastos -R$ 600/mês · Aporte R$ 2.500 · Retorno 12,5% a.a.',
+    incomeAdj: 20,
+    expenseAdj: -600,
+    contribution: 2500,
+    returnRate: 12.5,
+  },
+]
 
 export default function PlanejamentoPage() {
   const { summary } = usePatrimony()
@@ -51,12 +114,13 @@ export default function PlanejamentoPage() {
     }
   }, [transactions])
 
-  // Parâmetros do Sandbox
+  // Parâmetros da Simulação (padrão inicial: Realista)
+  const [activePreset, setActivePreset] = useState<ScenarioPresetKey>('realistic')
   const [horizonMonths, setHorizonMonths] = useState<number>(12)
-  const [incomeAdjPercent, setIncomeAdjPercent] = useState<number>(10)
-  const [expenseAdjFixed, setExpenseAdjFixed] = useState<number>(-400)
+  const [incomeAdjPercent, setIncomeAdjPercent] = useState<number>(5)
+  const [expenseAdjFixed, setExpenseAdjFixed] = useState<number>(-200)
   const [monthlyContribution, setMonthlyContribution] = useState<number>(1000)
-  const [annualReturnRate, setAnnualReturnRate] = useState<number>(11.5) // 11.5% a.a.
+  const [annualReturnRate, setAnnualReturnRate] = useState<number>(10.5)
   const [events, setEvents] = useState<SimulationEvent[]>([])
 
   // Novo evento avulso
@@ -65,7 +129,6 @@ export default function PlanejamentoPage() {
   const [eventName, setEventName] = useState<string>('Bônus / 13º Salário')
   const [eventType, setEventType] = useState<'income' | 'expense'>('income')
 
-  // Execução do Simulador Sandbox (Regra 5: puramente em memória!)
   const simulation = useMemo(() => {
     return runSandboxSimulation({
       horizonMonths,
@@ -92,34 +155,20 @@ export default function PlanejamentoPage() {
     events,
   ])
 
-  function applyPreset(preset: 'conservative' | 'realistic' | 'optimistic' | 'transition') {
-    if (preset === 'conservative') {
-      setIncomeAdjPercent(0)
-      setExpenseAdjFixed(300)
-      setMonthlyContribution(400)
-      setAnnualReturnRate(9.0)
-    } else if (preset === 'realistic') {
-      setIncomeAdjPercent(5)
-      setExpenseAdjFixed(-200)
-      setMonthlyContribution(1000)
-      setAnnualReturnRate(10.5)
-    } else if (preset === 'optimistic') {
-      setIncomeAdjPercent(20)
-      setExpenseAdjFixed(-600)
-      setMonthlyContribution(2500)
-      setAnnualReturnRate(12.5)
-    } else if (preset === 'transition') {
-      setIncomeAdjPercent(-80)
-      setExpenseAdjFixed(-1500)
-      setMonthlyContribution(0)
-      setAnnualReturnRate(10.0)
-    }
+  function applyPreset(presetKey: Exclude<ScenarioPresetKey, 'custom'>) {
+    const found = SCENARIO_PRESETS.find((p) => p.key === presetKey)
+    if (!found) return
+    setActivePreset(presetKey)
+    setIncomeAdjPercent(found.incomeAdj)
+    setExpenseAdjFixed(found.expenseAdj)
+    setMonthlyContribution(found.contribution)
+    setAnnualReturnRate(found.returnRate)
   }
 
   function handleAddEvent(e: React.FormEvent) {
     e.preventDefault()
     const amt = parseFloat(eventAmount)
-    if (isNaN(amt) || amt <= 0 || !eventName.trim()) return
+    if (Number.isNaN(amt) || amt <= 0 || !eventName.trim()) return
 
     const newEvt: SimulationEvent = {
       id: String(Date.now()),
@@ -137,108 +186,167 @@ export default function PlanejamentoPage() {
     setEvents((prev) => prev.filter((e) => e.id !== id))
   }
 
+  const activeScenarioInfo = SCENARIO_PRESETS.find((p) => p.key === activePreset)
+
   return (
     <div className="space-y-8 animate-in fade-in-50 duration-200">
-      {/* Top Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between pb-2 border-b">
+      {/* Cabeçalho e Seletor de Cenários */}
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between pb-3 border-b">
         <div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2.5 flex-wrap">
             <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
-              Planejamento Futuro & Simulador
+              Planejamento Futuro
             </h1>
-            <span className="rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
-              <Zap className="h-3 w-3" /> Modo Sandbox
-            </span>
+            <Badge variant="success">Simulação Livre</Badge>
           </div>
           <p className="text-sm text-muted-foreground mt-0.5">
-            Projete cenários financeiros de curto, médio e longo prazo sem alterar seus dados reais (Regra 5).
+            Projete a evolução do seu patrimônio em diferentes horizontes sem afetar seus saldos reais.
           </p>
         </div>
 
-        {/* Pré-configurações Rápidas */}
-        <div className="flex flex-wrap gap-2">
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => applyPreset('conservative')}
-            className="text-xs"
-          >
-            Conservador
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => applyPreset('realistic')}
-            className="text-xs"
-          >
-            Realista
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => applyPreset('optimistic')}
-            className="text-xs"
-          >
-            Otimista
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => applyPreset('transition')}
-            className="text-xs text-amber-600 dark:text-amber-400"
-          >
-            Transição
-          </Button>
+        {/* Seletor de Cenários + HoverCard Informativo */}
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-xs font-medium text-muted-foreground mr-1">Cenários:</span>
+          {SCENARIO_PRESETS.map((preset) => {
+            const isSelected = activePreset === preset.key
+            return (
+              <Button
+                key={preset.key}
+                size="sm"
+                variant={isSelected ? 'default' : 'outline'}
+                onClick={() => applyPreset(preset.key)}
+                className="text-xs"
+              >
+                {preset.label}
+              </Button>
+            )
+          })}
+
+          <HoverCard openDelay={120} closeDelay={100}>
+            <HoverCardTrigger asChild>
+              <button
+                type="button"
+                className="inline-flex size-8 items-center justify-center rounded-lg border border-border bg-card text-muted-foreground hover:text-foreground hover:border-primary/40 transition-colors cursor-pointer"
+                aria-label="Entenda como funciona cada cenário de planejamento"
+                title="Entenda os cenários"
+              >
+                <HelpCircle className="size-4" />
+              </button>
+            </HoverCardTrigger>
+            <HoverCardContent align="end" className="w-88 sm:w-96 p-4 space-y-3">
+              <div className="space-y-0.5 pb-2 border-b">
+                <h4 className="text-sm font-semibold text-foreground">
+                  Como funcionam os Cenários?
+                </h4>
+                <p className="text-xs text-muted-foreground">
+                  Escolha um ponto de partida rápido ou personalize os controles livremente.
+                </p>
+              </div>
+
+              <div className="space-y-3 text-xs">
+                <div className="flex items-start gap-2.5">
+                  <div className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-md bg-blue-500/10 text-blue-500">
+                    <Shield className="size-3.5" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-foreground">Conservador</p>
+                    <p className="text-muted-foreground leading-relaxed">
+                      Mantém sua renda atual estável, adiciona margem extra para imprevistos nos gastos e projeta retorno cauteloso (9,0% a.a.).
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-2.5">
+                  <div className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+                    <Target className="size-3.5" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-foreground">Realista</p>
+                    <p className="text-muted-foreground leading-relaxed">
+                      Considera reajuste gradual de renda (+5%), redução leve de despesas (-R$ 200/mês) e aportes mensais constantes (10,5% a.a.).
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-2.5">
+                  <div className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-md bg-emerald-500/10 text-emerald-500">
+                    <Rocket className="size-3.5" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-foreground">Otimista</p>
+                    <p className="text-muted-foreground leading-relaxed">
+                      Simula crescimento acelerado de receita (+20%), corte expressivo de custos (-R$ 600/mês) e alta capacidade de aporte (12,5% a.a.).
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </HoverCardContent>
+          </HoverCard>
         </div>
       </div>
 
-      {/* Banner de Garantia Sandbox */}
-      <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4 text-xs text-primary flex items-start gap-3">
-        <Info className="h-4 w-4 shrink-0 mt-0.5" />
-        <div>
-          <span className="font-semibold">Ambiente Isolado de Simulação:</span> Todas as projeções são calculadas em tempo real na memória.
-          Nenhuma transação, conta ou investimento é modificado no banco de dados. Sinta-se livre para testar qualquer hipótese.
-        </div>
-      </div>
+      {/* Alert Discreto Explicativo dos Cenários */}
+      <Alert variant="subtle">
+        <Info className="size-4" />
+        <AlertTitle className="flex items-center gap-2 flex-wrap">
+          <span>
+            {activeScenarioInfo
+              ? `Cenário ${activeScenarioInfo.label}: ${activeScenarioInfo.tagline}`
+              : 'Cenário Personalizado'}
+          </span>
+          {activeScenarioInfo && (
+            <span className="text-[11px] font-normal text-muted-foreground tabular">
+              ({activeScenarioInfo.paramsLabel})
+            </span>
+          )}
+        </AlertTitle>
+        <AlertDescription>
+          <p>
+            {activeScenarioInfo
+              ? activeScenarioInfo.description
+              : 'Você ajustou manualmente as premissas de receita, gastos ou investimentos. Use os botões Conservador, Realista ou Otimista acima (ou passe o mouse no ícone "?") para comparar estratégias.'}
+          </p>
+        </AlertDescription>
+      </Alert>
 
       {/* KPIs da Simulação */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="rounded-2xl border bg-card p-5 shadow-xs">
           <div className="flex items-center justify-between text-muted-foreground">
             <span className="text-xs font-semibold uppercase tracking-wider">
-              Patrimônio Base
+              Ritmo Atual
             </span>
-            <Calendar className="h-4 w-4 text-muted-foreground" />
+            <Calendar className="size-4 text-muted-foreground" />
           </div>
           <div className="mt-2 tabular text-2xl font-bold">
             {formatBRL(simulation.finalBaseNetWorth)}
           </div>
           <p className="text-xs text-muted-foreground mt-1">
-            No ritmo atual em {horizonMonths} meses
+            Projeção mantendo o padrão atual em {horizonMonths} meses
           </p>
         </div>
 
         <div className="rounded-2xl border bg-card p-5 shadow-xs border-primary/30">
           <div className="flex items-center justify-between text-muted-foreground">
             <span className="text-xs font-semibold text-primary uppercase tracking-wider">
-              Cenário Simulado
+              Patrimônio Projetado
             </span>
-            <TrendingUp className="h-4 w-4 text-primary" />
+            <TrendingUp className="size-4 text-primary" />
           </div>
           <div className="mt-2 tabular text-2xl font-black text-primary">
             {formatBRL(simulation.finalSimulatedNetWorth)}
           </div>
           <p className="text-xs text-muted-foreground mt-1">
-            Com as decisões do sandbox aplicadas
+            Estimativa com o cenário selecionado
           </p>
         </div>
 
         <div className="rounded-2xl border bg-card p-5 shadow-xs">
           <div className="flex items-center justify-between text-muted-foreground">
             <span className="text-xs font-semibold uppercase tracking-wider">
-              Diferencial Acumulado
+              Diferença Acumulada
             </span>
-            <Sparkles className="h-4 w-4 text-emerald-500" />
+            <Sparkles className="size-4 text-emerald-500" />
           </div>
           <div
             className={`mt-2 tabular text-2xl font-bold ${
@@ -252,38 +360,38 @@ export default function PlanejamentoPage() {
           </div>
           <p className="text-xs text-muted-foreground mt-1">
             {simulation.netWorthGain >= 0
-              ? 'Ganho patrimonial líquido adicional'
-              : 'Perda projetada no período'}
+              ? 'Evolução adicional frente ao ritmo atual'
+              : 'Redução frente ao ritmo atual'}
           </p>
         </div>
 
         <div className="rounded-2xl border bg-card p-5 shadow-xs">
           <div className="flex items-center justify-between text-muted-foreground">
             <span className="text-xs font-semibold uppercase tracking-wider">
-              Poupança / Mês
+              Saldo Livre Mensal
             </span>
-            <Layers className="h-4 w-4 text-amber-500" />
+            <Layers className="size-4 text-amber-500" />
           </div>
           <div className="mt-2 tabular text-2xl font-bold text-amber-600 dark:text-amber-400">
             {formatBRL(simulation.monthlySavingsSimulated)}
           </div>
           <p className="text-xs text-muted-foreground mt-1">
-            Sobra operacional mensal simulada
+            Capacidade mensal estimada de poupança
           </p>
         </div>
       </div>
 
-      {/* Painel Central: Controles do Sandbox e Gráfico de Projeção */}
+      {/* Painel Central: Controles e Gráfico de Projeção */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Painel de Controles */}
         <div className="rounded-2xl border bg-card p-5 shadow-xs space-y-4 lg:col-span-1">
           <div className="flex items-center gap-2 pb-2 border-b">
-            <SlidersHorizontal className="h-4 w-4 text-primary" />
-            <h2 className="font-semibold text-sm">Parâmetros do Cenário</h2>
+            <SlidersHorizontal className="size-4 text-primary" />
+            <h2 className="font-semibold text-sm">Premissas da Projeção</h2>
           </div>
 
           <div>
-            <Label className="text-xs">Horizonte da Projeção</Label>
+            <Label className="text-xs">Horizonte de Tempo</Label>
             <div className="grid grid-cols-4 gap-1.5 mt-1.5">
               {[
                 { months: 6, label: '6 Meses' },
@@ -319,11 +427,14 @@ export default function PlanejamentoPage() {
               type="number"
               step="1"
               value={incomeAdjPercent}
-              onChange={(e) => setIncomeAdjPercent(Number(e.target.value))}
+              onChange={(e) => {
+                setActivePreset('custom')
+                setIncomeAdjPercent(Number(e.target.value))
+              }}
               className="mt-1 tabular"
             />
             <span className="text-[11px] text-muted-foreground">
-              Ex: +15% para aumento de salário ou -20% para perda de renda.
+              Ex.: +15% para aumento de renda ou -20% para redução.
             </span>
           </div>
 
@@ -339,17 +450,20 @@ export default function PlanejamentoPage() {
               type="number"
               step="50"
               value={expenseAdjFixed}
-              onChange={(e) => setExpenseAdjFixed(Number(e.target.value))}
+              onChange={(e) => {
+                setActivePreset('custom')
+                setExpenseAdjFixed(Number(e.target.value))
+              }}
               className="mt-1 tabular"
             />
             <span className="text-[11px] text-muted-foreground">
-              Negativo = corte de gastos. Positivo = novo compromisso.
+              Valores negativos representam economia; positivos, novos gastos.
             </span>
           </div>
 
           <div>
             <div className="flex justify-between text-xs tabular">
-              <Label htmlFor="contrib-adj">Aporte Mensal em Investimentos (R$)</Label>
+              <Label htmlFor="contrib-adj">Aporte Mensal Investido (R$)</Label>
               <span className="font-semibold text-emerald-600 dark:text-emerald-400">
                 {formatBRL(monthlyContribution)}
               </span>
@@ -359,14 +473,17 @@ export default function PlanejamentoPage() {
               type="number"
               step="50"
               value={monthlyContribution}
-              onChange={(e) => setMonthlyContribution(Number(e.target.value))}
+              onChange={(e) => {
+                setActivePreset('custom')
+                setMonthlyContribution(Number(e.target.value))
+              }}
               className="mt-1 tabular"
             />
           </div>
 
           <div>
             <div className="flex justify-between text-xs tabular">
-              <Label htmlFor="return-rate">Rentabilidade Estimada dos Ativos (% a.a.)</Label>
+              <Label htmlFor="return-rate">Rentabilidade Anual Estimada (% a.a.)</Label>
               <span className="font-semibold text-primary">{annualReturnRate}% a.a.</span>
             </div>
             <Input
@@ -374,7 +491,10 @@ export default function PlanejamentoPage() {
               type="number"
               step="0.5"
               value={annualReturnRate}
-              onChange={(e) => setAnnualReturnRate(Number(e.target.value))}
+              onChange={(e) => {
+                setActivePreset('custom')
+                setAnnualReturnRate(Number(e.target.value))
+              }}
               className="mt-1 tabular"
             />
           </div>
@@ -385,9 +505,9 @@ export default function PlanejamentoPage() {
           <div>
             <div className="flex items-center justify-between pb-2 border-b">
               <div>
-                <h2 className="font-semibold text-sm">Trajetória Patrimonial Comparada</h2>
+                <h2 className="font-semibold text-sm">Evolução Patrimonial Comparada</h2>
                 <p className="text-xs text-muted-foreground">
-                  Cenário Base (sem mudanças) vs. Cenário Simulado Sandbox no horizonte de {horizonMonths} meses.
+                  Comparativo entre manter o ritmo atual e aplicar o cenário escolhido ao longo de {horizonMonths} meses.
                 </p>
               </div>
             </div>
@@ -408,7 +528,7 @@ export default function PlanejamentoPage() {
                   <Line
                     type="monotone"
                     dataKey="baseTotalNetWorth"
-                    name="Cenário Base"
+                    name="Ritmo Atual"
                     stroke="#94a3b8"
                     strokeWidth={2}
                     strokeDasharray="4 4"
@@ -417,7 +537,7 @@ export default function PlanejamentoPage() {
                   <Line
                     type="monotone"
                     dataKey="simulatedTotalNetWorth"
-                    name="Cenário Simulado"
+                    name="Cenário Projetado"
                     stroke="#10b981"
                     strokeWidth={3}
                     dot={{ r: 3 }}
@@ -429,25 +549,23 @@ export default function PlanejamentoPage() {
 
           <div className="rounded-xl bg-muted/30 p-3 text-xs text-muted-foreground flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 tabular">
             <span>
-              Saldo Inicial de Caixa + Investimentos:{' '}
+              Ponto de Partida (Caixa + Investimentos):{' '}
               {formatBRL(summary.assetsBreakdown.cash + summary.assetsBreakdown.investments)}
             </span>
             <span className="font-medium text-foreground">
-              Ganho Final em {horizonMonths} meses: {formatBRL(simulation.netWorthGain)}
+              Diferença projetada em {horizonMonths} meses: {formatBRL(simulation.netWorthGain)}
             </span>
           </div>
         </div>
       </div>
 
-      {/* Adição de Eventos Específicos / Extraordinários no Sandbox */}
+      {/* Eventos Planejados / Extraordinários */}
       <div className="rounded-2xl border bg-card p-5 shadow-xs space-y-4">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="font-semibold text-sm">
-              Eventos Avulsos & Choques de Caixa na Simulação
-            </h2>
+            <h2 className="font-semibold text-sm">Eventos Futuros Planejados</h2>
             <p className="text-xs text-muted-foreground">
-              Simule a ocorrência de entradas ou saídas extraordinárias em meses futuros específicos.
+              Inclua entradas ou gastos pontuais (como 13º salário, bônus, viagem ou compra de veículo) em meses específicos.
             </p>
           </div>
         </div>
@@ -459,7 +577,7 @@ export default function PlanejamentoPage() {
             </Label>
             <Input
               id="evt-name"
-              placeholder="Ex: 13º Salário, Troca de Carro, Bônus..."
+              placeholder="Ex.: 13º Salário, Viagem em Família, Bônus..."
               value={eventName}
               onChange={(e) => setEventName(e.target.value)}
             />
@@ -467,7 +585,7 @@ export default function PlanejamentoPage() {
 
           <div>
             <Label htmlFor="evt-type" className="text-xs">
-              Impacto
+              Tipo
             </Label>
             <select
               id="evt-type"
@@ -475,18 +593,14 @@ export default function PlanejamentoPage() {
               onChange={(e) => setEventType(e.target.value as 'income' | 'expense')}
               className="mt-1 flex h-9 w-full rounded-md border border-input bg-background text-foreground px-3 py-1 text-sm shadow-2xs"
             >
-              <option value="income" className="bg-popover text-popover-foreground">
-                Entrada (+ R$)
-              </option>
-              <option value="expense" className="bg-popover text-popover-foreground">
-                Saída (- R$)
-              </option>
+              <option value="income">Entrada (+ R$)</option>
+              <option value="expense">Saída (- R$)</option>
             </select>
           </div>
 
           <div>
             <Label htmlFor="evt-month" className="text-xs">
-              No Mês
+              Mês da Projeção
             </Label>
             <Input
               id="evt-month"
@@ -508,13 +622,13 @@ export default function PlanejamentoPage() {
                 id="evt-amt"
                 type="number"
                 step="0.01"
-                placeholder="0.00"
+                placeholder="0,00"
                 value={eventAmount}
                 onChange={(e) => setEventAmount(e.target.value)}
                 className="tabular"
               />
               <Button type="submit" size="sm" className="shrink-0">
-                + Inserir
+                + Incluir
               </Button>
             </div>
           </div>

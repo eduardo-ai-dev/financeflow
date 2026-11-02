@@ -19,9 +19,7 @@ import {
   CircleDollarSign,
   Wallet,
   RotateCw,
-  ShieldCheck,
   Calendar,
-  Sparkles,
   CreditCard,
   ArrowRight,
   Clock,
@@ -103,16 +101,11 @@ export default function DashboardPage() {
             onClick={() => refetch()}
             disabled={isFetching}
             className="text-xs font-medium"
-            title="Atualizar métricas do banco"
+            title="Atualizar indicadores"
           >
             <RotateCw className={`size-3.5 mr-1.5 ${isFetching ? 'animate-spin' : ''}`} />
             <span>Atualizar</span>
           </Button>
-
-          <div className="inline-flex items-center gap-1.5 text-xs text-success bg-success/10 border border-success/20 px-3 py-1.5 rounded-lg">
-            <ShieldCheck className="size-3.5" />
-            <span className="hidden sm:inline font-medium">Dados Reais Supabase</span>
-          </div>
         </div>
       </div>
 
@@ -421,34 +414,6 @@ export default function DashboardPage() {
               })}
             </div>
           )}
-        </div>
-      </section>
-
-      {/* Card Informativo de Integridade */}
-      <section className="rounded-2xl border bg-card p-6 sm:p-8 shadow-xs">
-        <div className="flex items-start gap-4">
-          <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary mt-0.5">
-            <Sparkles className="size-5" />
-          </div>
-          <div className="space-y-1.5">
-            <h2 className="text-lg font-bold tracking-tight">
-              Motor Financeiro Conectado (Regras de Negócio do README)
-            </h2>
-            <p className="text-sm text-muted-foreground leading-relaxed">
-              Todos os indicadores acima são calculados diretamente no PostgreSQL pelo Supabase a partir das views <code>account_balances</code> e <code>card_limits</code>, com isolamento Row Level Security ativo para o seu usuário.
-            </p>
-            <div className="flex flex-wrap gap-2 pt-2">
-              <span className="inline-flex items-center text-xs font-medium text-muted-foreground bg-muted/60 px-2.5 py-1 rounded-md">
-                Regra 2: Transferências neutras
-              </span>
-              <span className="inline-flex items-center text-xs font-medium text-muted-foreground bg-muted/60 px-2.5 py-1 rounded-md">
-                Regra 4: Aportes fora de despesas
-              </span>
-              <span className="inline-flex items-center text-xs font-medium text-muted-foreground bg-muted/60 px-2.5 py-1 rounded-md">
-                Regra 7: Sem dados simulados
-              </span>
-            </div>
-          </div>
         </div>
       </section>
 

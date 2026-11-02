@@ -8,6 +8,9 @@ import { getCategoryIcon } from '@/lib/icons'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Input } from '@/components/ui/input'
+import { Badge } from '@/components/ui/badge'
+import { Progress } from '@/components/ui/progress'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import {
   CalendarClock,
   Plus,
@@ -18,6 +21,7 @@ import {
   Calendar,
   XCircle,
   MoreVertical,
+  AlertCircle,
 } from 'lucide-react'
 import {
   DropdownMenu,
@@ -27,10 +31,20 @@ import {
 } from '@/components/ui/dropdown-menu'
 
 export default function ParcelamentosPage() {
-  const { installments, isLoading, cancelInstallment } = useInstallments()
+  const { installments, isLoading, error, cancelInstallment } = useInstallments()
   const [dialogOpen, setDialogOpen] = useState(false)
   const [search, setSearch] = useState('')
-  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'completed'>('active')
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'completed'>('all')
+
+  const activeInstallments = useMemo(
+    () => installments.filter((i) => i.status === 'active'),
+    [installments]
+  )
+
+  const completedInstallments = useMemo(
+    () => installments.filter((i) => i.status === 'completed'),
+    [installments]
+  )
 
   const filteredInstallments = useMemo(() => {
     return installments.filter((item) => {
@@ -43,12 +57,6 @@ export default function ParcelamentosPage() {
       return true
     })
   }, [installments, search, statusFilter])
-
-  // KPIs
-  const activeInstallments = useMemo(
-    () => installments.filter((i) => i.status === 'active'),
-    [installments]
-  )
 
   const totalRemainingDebt = useMemo(() => {
     return activeInstallments.reduce((sum, item) => sum + Number(item.remaining_amount), 0)
@@ -74,7 +82,7 @@ export default function ParcelamentosPage() {
             Central de Parcelamentos
           </h1>
           <p className="text-sm text-muted-foreground mt-0.5">
-            Acompanhe compromissos parcelados no cartão, carnês e empréstimos com cronograma e progresso.
+            Acompanhe compromissos parcelados no cartão, carnês e boletos com cronograma e progresso.
           </p>
         </div>
 
@@ -84,21 +92,29 @@ export default function ParcelamentosPage() {
         </Button>
       </div>
 
+      {error && (
+        <Alert variant="destructive">
+          <AlertCircle className="size-4" />
+          <AlertTitle>Não foi possível carregar os parcelamentos</AlertTitle>
+          <AlertDescription>
+            Verifique sua conexão e recarregue a página para atualizar os registros.
+          </AlertDescription>
+        </Alert>
+      )}
+
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        {/* Total Comprometido Restante */}
         <div className="rounded-2xl border bg-card p-5 shadow-xs space-y-1">
           <div className="flex items-center justify-between text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-            <span>Dívida Total Restante</span>
+            <span>Saldo Restante</span>
             <CalendarClock className="size-4 text-rose-500" />
           </div>
           <div className="tabular text-2xl font-bold tracking-tight text-rose-600 dark:text-rose-400">
             {isLoading ? <Skeleton className="h-8 w-32 mt-1" /> : formatBRL(totalRemainingDebt)}
           </div>
-          <p className="text-[11px] text-muted-foreground">Soma de todas as parcelas futuras</p>
+          <p className="text-[11px] text-muted-foreground">Soma de todas as parcelas em aberto</p>
         </div>
 
-        {/* Comprometimento Mensal */}
         <div className="rounded-2xl border bg-card p-5 shadow-xs space-y-1">
           <div className="flex items-center justify-between text-xs font-semibold text-muted-foreground uppercase tracking-wider">
             <span>Comprometimento Mensal</span>
@@ -110,10 +126,9 @@ export default function ParcelamentosPage() {
           <p className="text-[11px] text-muted-foreground">Peso fixo das parcelas no mês</p>
         </div>
 
-        {/* Parcelamentos Ativos */}
         <div className="rounded-2xl border bg-card p-5 shadow-xs space-y-1">
           <div className="flex items-center justify-between text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-            <span>Contratos Ativos</span>
+            <span>Parcelamentos Ativos</span>
             <CheckCircle2 className="size-4 text-primary" />
           </div>
           <div className="tabular text-2xl font-bold tracking-tight text-foreground">
@@ -139,7 +154,7 @@ export default function ParcelamentosPage() {
           <button
             type="button"
             onClick={() => setStatusFilter('active')}
-            className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${
+            className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all cursor-pointer ${
               statusFilter === 'active'
                 ? 'bg-background text-foreground shadow-xs'
                 : 'text-muted-foreground hover:text-foreground'
@@ -150,24 +165,24 @@ export default function ParcelamentosPage() {
           <button
             type="button"
             onClick={() => setStatusFilter('completed')}
-            className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${
+            className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all cursor-pointer ${
               statusFilter === 'completed'
                 ? 'bg-background text-foreground shadow-xs'
                 : 'text-muted-foreground hover:text-foreground'
             }`}
           >
-            Concluídos
+            Concluídos ({completedInstallments.length})
           </button>
           <button
             type="button"
             onClick={() => setStatusFilter('all')}
-            className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${
+            className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all cursor-pointer ${
               statusFilter === 'all'
                 ? 'bg-background text-foreground shadow-xs'
                 : 'text-muted-foreground hover:text-foreground'
             }`}
           >
-            Todos
+            Todos ({installments.length})
           </button>
         </div>
       </div>
@@ -188,51 +203,56 @@ export default function ParcelamentosPage() {
           title={
             statusFilter === 'completed'
               ? 'Nenhum parcelamento concluído'
-              : 'Nenhum parcelamento ativo encontrado'
+              : 'Nenhum parcelamento encontrado'
           }
           description={
             statusFilter === 'completed'
-              ? 'Quando todas as parcelas forem pagas, o contrato ficará registrado aqui.'
+              ? 'Quando todas as parcelas forem quitadas, o histórico aparecerá aqui.'
               : 'Cadastre suas compras parceladas no cartão de crédito, carnês ou acordos para acompanhar a evolução.'
           }
           icon={CalendarClock}
-          phase={3}
         />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
           {filteredInstallments.map((item: InstallmentWithDetails) => {
             const CategoryIcon = getCategoryIcon(item.category?.icon)
-            const isCard = !!item.card
+            const isCard = !!item.card || !!item.card_id
 
             return (
               <div
                 key={item.id}
-                className="group rounded-2xl border bg-card p-6 shadow-xs transition-all hover:shadow-md space-y-4"
+                className="group rounded-2xl border bg-card p-6 shadow-xs transition-all hover:border-primary/30 hover:shadow-md space-y-4"
               >
                 {/* Header do Card */}
                 <div className="flex items-start justify-between gap-3">
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <h3 className="font-bold text-base tracking-tight text-foreground">
+                  <div className="space-y-1.5 min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h3 className="font-bold text-base tracking-tight text-foreground truncate">
                         {item.description}
                       </h3>
                       {item.status === 'completed' && (
-                        <span className="text-[10px] bg-emerald-500/10 text-emerald-600 font-bold px-2 py-0.5 rounded-full">
-                          Concluído
-                        </span>
+                        <Badge variant="success">Concluído</Badge>
+                      )}
+                      {item.status === 'canceled' && (
+                        <Badge variant="outline">Cancelado</Badge>
+                      )}
+                      {item.already_included_in_limit && (
+                        <Badge variant="outline" className="text-[10px]">
+                          Já incluso no limite
+                        </Badge>
                       )}
                     </div>
 
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                       {isCard ? (
                         <span className="inline-flex items-center gap-1 font-medium text-foreground">
                           <CreditCard className="size-3.5 text-primary" />
-                          {item.card?.name}
+                          {item.card?.name || 'Cartão de Crédito'}
                         </span>
                       ) : (
                         <span className="inline-flex items-center gap-1 font-medium text-foreground">
                           <FileText className="size-3.5 text-muted-foreground" />
-                          Carnê / Conta
+                          {item.account?.name || 'Carnê / Boleto'}
                         </span>
                       )}
 
@@ -248,18 +268,18 @@ export default function ParcelamentosPage() {
                     </div>
                   </div>
 
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="size-8 text-muted-foreground hover:text-foreground"
-                      >
-                        <MoreVertical className="size-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      {item.status === 'active' && (
+                  {item.status === 'active' && (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="size-8 text-muted-foreground hover:text-foreground shrink-0"
+                        >
+                          <MoreVertical className="size-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
                         <DropdownMenuItem
                           onClick={() => cancelInstallment(item.id)}
                           className="text-destructive focus:text-destructive"
@@ -267,9 +287,9 @@ export default function ParcelamentosPage() {
                           <XCircle className="size-4 mr-2" />
                           Cancelar Parcelamento
                         </DropdownMenuItem>
-                      )}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
                 </div>
 
                 {/* Barra de Progresso das Parcelas */}
@@ -281,29 +301,31 @@ export default function ParcelamentosPage() {
                         {item.paid_installments} de {item.total_installments} pagas
                       </strong>
                     </span>
-                    <span className="font-extrabold tabular text-primary">
+                    <span className="font-bold tabular text-primary">
                       {item.progress_percent}%
                     </span>
                   </div>
-                  <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-primary transition-all duration-300"
-                      style={{ width: `${item.progress_percent}%` }}
-                    />
-                  </div>
+                  <Progress value={item.progress_percent} />
                 </div>
 
                 {/* Resumo Financeiro */}
-                <div className="grid grid-cols-2 gap-3 pt-3 border-t text-xs">
+                <div className="grid grid-cols-3 gap-3 pt-3 border-t text-xs">
                   <div>
-                    <span className="text-muted-foreground">Valor da Parcela:</span>
+                    <span className="text-muted-foreground">Total:</span>
+                    <div className="tabular font-semibold text-sm text-foreground mt-0.5">
+                      {formatBRL(item.total_amount)}
+                    </div>
+                  </div>
+
+                  <div>
+                    <span className="text-muted-foreground">Parcela:</span>
                     <div className="tabular font-bold text-sm text-foreground mt-0.5">
                       {formatBRL(item.installment_amount)}
                     </div>
                   </div>
 
                   <div>
-                    <span className="text-muted-foreground">Saldo Restante:</span>
+                    <span className="text-muted-foreground">Restante:</span>
                     <div className="tabular font-bold text-sm text-rose-600 dark:text-rose-400 mt-0.5">
                       {formatBRL(item.remaining_amount)}
                     </div>
@@ -316,7 +338,7 @@ export default function ParcelamentosPage() {
                     <Calendar className="size-3" />
                     Início: {formatDate(item.start_date)}
                   </span>
-                  <span>Término: {formatDate(item.end_date)}</span>
+                  <span>Término previsto: {formatDate(item.end_date)}</span>
                 </div>
               </div>
             )
@@ -325,10 +347,7 @@ export default function ParcelamentosPage() {
       )}
 
       {/* Modal Dialog de Novo Parcelamento */}
-      <InstallmentDialog
-        open={dialogOpen}
-        onOpenChange={setDialogOpen}
-      />
+      <InstallmentDialog open={dialogOpen} onOpenChange={setDialogOpen} />
     </div>
   )
 }

@@ -1,6 +1,8 @@
 import { supabase } from '@/lib/supabase'
-import type { CreditCard, CardLimit } from '@/types/database'
+import type { CreditCard, CardInvoice, Transaction } from '@/types/database'
 import type { CreditCardFormData } from '@/lib/validations/card'
+import { isIncludedInCardLimit } from '@/lib/validations/installment'
+import { toCents, fromCents } from '@/lib/money'
 
 export interface CreditCardWithLimit extends CreditCard {
   used_amount: number
@@ -8,30 +10,59 @@ export interface CreditCardWithLimit extends CreditCard {
 }
 
 export async function fetchCreditCardsWithLimits(): Promise<CreditCardWithLimit[]> {
-  const [cardsRes, limitsRes] = await Promise.all([
+  const [cardsRes, txsRes, invoicesRes] = await Promise.all([
     supabase
       .from('credit_cards')
       .select('*')
       .order('is_archived', { ascending: true })
       .order('name', { ascending: true }),
-    supabase.from('card_limits').select('*'),
+    supabase
+      .from('transactions')
+      .select('card_id, invoice_id, amount, status, notes')
+      .eq('kind', 'card_purchase'),
+    supabase.from('card_invoices').select('id, status'),
   ])
 
   if (cardsRes.error) throw cardsRes.error
-  // card_limits pode não ter registros se a view ainda não tiver dados
-  const cards = (cardsRes.data || []) as CreditCard[]
-  const limits = (limitsRes.data || []) as CardLimit[]
 
-  const limitsMap = new Map<string, CardLimit>()
-  limits.forEach((l) => limitsMap.set(l.card_id, l))
+  const cards = (cardsRes.data || []) as CreditCard[]
+  const purchases = (txsRes.data || []) as Array<
+    Pick<Transaction, 'card_id' | 'invoice_id' | 'amount' | 'status' | 'notes'>
+  >
+  const invoicesMap = new Map<string, CardInvoice['status']>(
+    ((invoicesRes.data || []) as Array<Pick<CardInvoice, 'id' | 'status'>>).map((inv) => [
+      inv.id,
+      inv.status,
+    ])
+  )
+
+  const usedCentsByCard = new Map<string, number>()
+
+  purchases.forEach((tx) => {
+    if (!tx.card_id) return
+    if (tx.status === 'canceled') return
+    // Parcelamentos marcados como "já contabilizados no limite utilizado do cartão"
+    // não devem subtrair novamente do limite disponível.
+    if (isIncludedInCardLimit(tx.notes)) return
+
+    const invStatus = tx.invoice_id ? invoicesMap.get(tx.invoice_id) : null
+    if (invStatus === 'paid') return
+
+    const prev = usedCentsByCard.get(tx.card_id) || 0
+    usedCentsByCard.set(tx.card_id, prev + toCents(Number(tx.amount)))
+  })
 
   return cards.map((card) => {
-    const limit = limitsMap.get(card.id)
-    const used = limit?.used_amount ?? 0
+    const initialCents = toCents(Number(card.initial_used_amount ?? 0))
+    const purchasesCents = usedCentsByCard.get(card.id) || 0
+    const totalUsedCents = initialCents + purchasesCents
+    const limitCents = toCents(Number(card.limit_amount))
+    const availableCents = Math.max(0, limitCents - totalUsedCents)
+
     return {
       ...card,
-      used_amount: used,
-      available_limit: Math.max(0, Number(card.limit_amount) - used),
+      used_amount: fromCents(totalUsedCents),
+      available_limit: fromCents(availableCents),
     }
   })
 }
@@ -98,4 +129,3 @@ export async function deleteCreditCard(id: string): Promise<void> {
   const { error } = await supabase.from('credit_cards').delete().eq('id', id)
   if (error) throw error
 }
-
