@@ -3,21 +3,25 @@
 -- Forçamento de JWT user_id, Políticas de Storage) e Classificação de Gastos
 -- =============================================================================
 
+begin;
+
 -- -----------------------------------------------------------------------------
 -- 1. Coluna expense_classification em transactions (conforme README.md)
 -- -----------------------------------------------------------------------------
 alter table public.transactions
-  add column if not exists expense_classification text
-  check (
+  add column if not exists expense_classification text;
+
+alter table public.transactions
+  drop constraint if exists transactions_expense_classification_check,
+  drop constraint if exists transactions_expense_classification_values_check,
+  drop constraint if exists transactions_expense_classification_kind_check;
+
+alter table public.transactions
+  add constraint transactions_expense_classification_values_check check (
     expense_classification is null
     or expense_classification in ('fixed', 'variable', 'occasional', 'extraordinary')
-  );
-
-alter table public.transactions
-  drop constraint if exists transactions_expense_classification_check;
-
-alter table public.transactions
-  add constraint transactions_expense_classification_check check (
+  ),
+  add constraint transactions_expense_classification_kind_check check (
     expense_classification is null
     or kind in ('expense', 'card_purchase')
   );
@@ -33,10 +37,56 @@ alter table public.goals
     image_url is null
     or image_url = ''
     or image_url ~* '^https?://'
-  );
+  ) not valid;
 
 -- -----------------------------------------------------------------------------
--- 3. Chaves Estrangeiras Compostas (id, user_id) para isolamento multi-tenant
+-- 3. Garantir UNIQUE (id, user_id) em todas as tabelas-alvo antes das FKs compostas
+--    (Corrige o erro 42830 em public.categories, que em 0001 tinha apenas
+--     unique (id, user_id, kind) e não unique (id, user_id))
+-- -----------------------------------------------------------------------------
+do $$
+declare
+  tbl text;
+  con_name text;
+begin
+  foreach tbl in array array[
+    'accounts',
+    'categories',
+    'credit_cards',
+    'card_invoices',
+    'installments',
+    'projects',
+    'real_estate_properties',
+    'real_estate_amortizations',
+    'goals',
+    'assets',
+    'investments',
+    'investment_transactions',
+    'liabilities'
+  ]
+  loop
+    con_name := tbl || '_id_user_key';
+    if not exists (
+      select 1
+      from pg_constraint c
+      join pg_class r on r.oid = c.conrelid
+      join pg_namespace n on n.oid = r.relnamespace
+      where n.nspname = 'public'
+        and r.relname = tbl
+        and c.conname = con_name
+    ) then
+      execute format(
+        'alter table public.%I add constraint %I unique (id, user_id)',
+        tbl,
+        con_name
+      );
+    end if;
+  end loop;
+end;
+$$;
+
+-- -----------------------------------------------------------------------------
+-- 4. Chaves Estrangeiras Compostas (id, user_id) para isolamento multi-tenant
 -- -----------------------------------------------------------------------------
 
 -- credit_cards -> default_account_id
@@ -185,7 +235,7 @@ alter table public.investment_transactions
   on delete set null (account_id);
 
 -- -----------------------------------------------------------------------------
--- 4. Regra 5: Nunca aceitar user_id vindo do cliente — sempre obter pelo JWT
+-- 5. Regra 5: Nunca aceitar user_id vindo do cliente — sempre obter pelo JWT
 --    Trigger que sobrescreve NEW.user_id com auth.uid() no INSERT e bloqueia
 --    qualquer tentativa de troca de titularidade (user_id) no UPDATE.
 -- -----------------------------------------------------------------------------
@@ -245,7 +295,7 @@ end;
 $$;
 
 -- -----------------------------------------------------------------------------
--- 5. Princípio do Menor Privilégio (REVOKE ALL + GRANT mínimo para authenticated)
+-- 6. Princípio do Menor Privilégio (REVOKE ALL + GRANT mínimo para authenticated)
 -- -----------------------------------------------------------------------------
 revoke all on table
   public.credit_cards,
@@ -279,55 +329,72 @@ revoke all on table public.card_limits from anon, authenticated;
 grant select on table public.card_limits to authenticated;
 
 -- -----------------------------------------------------------------------------
--- 6. Regra 6: Supabase Storage com RLS e Policies Explícitas por Usuário
+-- 7. Regra 6: Supabase Storage com RLS e Policies Explícitas por Usuário
 --    Cada usuário só pode ler/gravar/atualizar/excluir arquivos dentro da
 --    sua própria pasta: user-attachments/<auth.uid()>/<arquivo>
 -- -----------------------------------------------------------------------------
-insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
-values (
-  'user-attachments',
-  'user-attachments',
-  false,
-  5242880, -- 5 MB
-  array['image/png', 'image/jpeg', 'image/webp', 'application/pdf']
-)
-on conflict (id) do update set
-  public = excluded.public,
-  file_size_limit = excluded.file_size_limit,
-  allowed_mime_types = excluded.allowed_mime_types;
-
-drop policy if exists storage_objects_select_own on storage.objects;
-create policy storage_objects_select_own on storage.objects
-  for select to authenticated
-  using (
-    bucket_id = 'user-attachments'
-    and (storage.foldername(name))[1] = (select auth.uid())::text
-  );
-
-drop policy if exists storage_objects_insert_own on storage.objects;
-create policy storage_objects_insert_own on storage.objects
-  for insert to authenticated
-  with check (
-    bucket_id = 'user-attachments'
-    and (storage.foldername(name))[1] = (select auth.uid())::text
-  );
-
-drop policy if exists storage_objects_update_own on storage.objects;
-create policy storage_objects_update_own on storage.objects
-  for update to authenticated
-  using (
-    bucket_id = 'user-attachments'
-    and (storage.foldername(name))[1] = (select auth.uid())::text
+do $$
+begin
+  insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+  values (
+    'user-attachments',
+    'user-attachments',
+    false,
+    5242880, -- 5 MB
+    array['image/png', 'image/jpeg', 'image/webp', 'application/pdf']
   )
-  with check (
-    bucket_id = 'user-attachments'
-    and (storage.foldername(name))[1] = (select auth.uid())::text
-  );
+  on conflict (id) do update set
+    public = excluded.public,
+    file_size_limit = excluded.file_size_limit,
+    allowed_mime_types = excluded.allowed_mime_types;
 
-drop policy if exists storage_objects_delete_own on storage.objects;
-create policy storage_objects_delete_own on storage.objects
-  for delete to authenticated
-  using (
-    bucket_id = 'user-attachments'
-    and (storage.foldername(name))[1] = (select auth.uid())::text
-  );
+  execute 'drop policy if exists storage_objects_select_own on storage.objects';
+  execute $pol$
+    create policy storage_objects_select_own on storage.objects
+      for select to authenticated
+      using (
+        bucket_id = 'user-attachments'
+        and (storage.foldername(name))[1] = (select auth.uid())::text
+      )
+  $pol$;
+
+  execute 'drop policy if exists storage_objects_insert_own on storage.objects';
+  execute $pol$
+    create policy storage_objects_insert_own on storage.objects
+      for insert to authenticated
+      with check (
+        bucket_id = 'user-attachments'
+        and (storage.foldername(name))[1] = (select auth.uid())::text
+      )
+  $pol$;
+
+  execute 'drop policy if exists storage_objects_update_own on storage.objects';
+  execute $pol$
+    create policy storage_objects_update_own on storage.objects
+      for update to authenticated
+      using (
+        bucket_id = 'user-attachments'
+        and (storage.foldername(name))[1] = (select auth.uid())::text
+      )
+      with check (
+        bucket_id = 'user-attachments'
+        and (storage.foldername(name))[1] = (select auth.uid())::text
+      )
+  $pol$;
+
+  execute 'drop policy if exists storage_objects_delete_own on storage.objects';
+  execute $pol$
+    create policy storage_objects_delete_own on storage.objects
+      for delete to authenticated
+      using (
+        bucket_id = 'user-attachments'
+        and (storage.foldername(name))[1] = (select auth.uid())::text
+      )
+  $pol$;
+exception
+  when insufficient_privilege or undefined_table then
+    raise notice 'Storage schema/table não editável pelo role atual; policies de tabelas públicas aplicadas normalmente.';
+end;
+$$;
+
+commit;
