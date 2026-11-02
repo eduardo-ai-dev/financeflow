@@ -46,12 +46,76 @@ export interface Category {
   updated_at: string
 }
 
+export type CardBrand = 'mastercard' | 'visa' | 'elo' | 'amex' | 'hipercard' | 'other'
+
+export interface CreditCard {
+  id: string
+  user_id: string
+  name: string
+  institution: string | null
+  brand: CardBrand
+  limit_amount: number
+  closing_day: number
+  due_day: number
+  color: string | null
+  default_account_id: string | null
+  is_archived: boolean
+  created_at: string
+  updated_at: string
+}
+
+export type InvoiceStatus = 'open' | 'closed' | 'paid' | 'overdue'
+
+export interface CardInvoice {
+  id: string
+  user_id: string
+  card_id: string
+  month: number
+  year: number
+  closing_date: string
+  due_date: string
+  status: InvoiceStatus
+  payment_transaction_id: string | null
+  created_at: string
+  updated_at: string
+}
+
+export type InstallmentStatus = 'active' | 'completed' | 'canceled'
+
+export interface Installment {
+  id: string
+  user_id: string
+  card_id: string | null
+  account_id: string | null
+  category_id: string | null
+  description: string
+  total_amount: number
+  installment_amount: number
+  total_installments: number
+  start_date: string
+  status: InstallmentStatus
+  notes: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface CardLimit {
+  card_id: string
+  user_id: string
+  name: string
+  limit_amount: number
+  used_amount: number
+  available_limit: number
+}
+
 export type TransactionKind =
   | 'income'
   | 'expense'
   | 'transfer'
   | 'investment_contribution'
   | 'investment_redemption'
+  | 'card_purchase'
+  | 'invoice_payment'
 
 export type TransactionStatus = 'pending' | 'completed' | 'canceled'
 
@@ -62,9 +126,13 @@ export interface Transaction {
   status: TransactionStatus
   description: string
   amount: number
-  account_id: string
+  account_id: string | null
   to_account_id: string | null
   category_id: string | null
+  card_id?: string | null
+  invoice_id?: string | null
+  installment_id?: string | null
+  installment_number?: number | null
   due_date: string
   paid_date: string | null
   notes: string | null
@@ -79,4 +147,3 @@ export interface AccountBalance {
   current_balance: number
   projected_balance: number
 }
-

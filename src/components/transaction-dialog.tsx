@@ -92,7 +92,7 @@ export function TransactionDialog({
         kind: (transactionToEdit.kind === 'transfer' ? 'transfer' : transactionToEdit.kind) as 'income' | 'expense' | 'transfer',
         description: transactionToEdit.description,
         amount: Number(transactionToEdit.amount),
-        account_id: transactionToEdit.account_id,
+        account_id: transactionToEdit.account_id || '',
         to_account_id: transactionToEdit.to_account_id,
         category_id: transactionToEdit.category_id,
         status: transactionToEdit.status === 'canceled' ? 'pending' : transactionToEdit.status,

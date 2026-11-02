@@ -33,8 +33,8 @@ Construir o FinanceFlow (README.md) de forma incremental: SPA React + TS + Vite,
 
 ## 3. Roadmap (igual ao README)
 1. **Fundação** (Concluída)
-2. **Contas, categorias, entradas, saídas, transferências** (Em andamento)
-3. Cartões, faturas, recorrências, parcelamentos
+2. **Contas, categorias, entradas, saídas, transferências** (Concluída)
+3. **Cartões, faturas, recorrências, parcelamentos** (Em andamento / Código pronto)
 4. Projetos + módulo imobiliário (SAC/Price, INCC, amortizações)
 5. Metas & Wishlist (conversão em ativo)
 6. Investimentos + balanço patrimonial
@@ -74,6 +74,21 @@ Construir o FinanceFlow (README.md) de forma incremental: SPA React + TS + Vite,
 
 ## Pronto quando (Fase 2)
 - [x] Usuário gerencia suas contas, categoriza receitas e despesas, transfere saldos entre contas sem distorcer o fluxo de caixa (Regra 2) e acompanha o fluxo de caixa no Resumo e Dashboard.
+
+---
+
+## 6. Fase 3 — Cartões de Crédito, Faturas e Parcelamentos (tarefas)
+- [x] **T3.1** Migração SQL `0002_cards_and_installments.sql`: tabelas `credit_cards`, `card_invoices`, `installments`, colunas em `transactions`, views `account_balances` e `card_limits`, triggers e RLS → Verify: arquivo SQL gerado e validado
+- [x] **T3.2** Esquemas de validação Zod (`src/lib/validations/card.ts`, `installment.ts`) e tipos atualizados em `database.ts` → Verify: tipos e imports sem erros
+- [x] **T3.3** Camada de serviços (`src/services/cards.ts`, `invoices.ts`, `installments.ts`) e hooks TanStack Query (`useCards`, `useInvoices`, `useInstallments`) → Verify: mutations com invalidação de cache
+- [x] **T3.4** Tela de Cartões de Crédito em `/cartoes`: listagem visual estilo cartão físico, limites disponíveis/utilizados, barra de progresso e modal de criação/edição (`CardDialog`) → Verify: renderiza cartões com cores e bandeiras
+- [x] **T3.5** Gestão e Quitação de Faturas: listagem de faturas (abertas, fechadas, pagas) e fluxo de "Pagar Fatura" com escolha da conta bancária de débito sem gerar duplicidade contábil (Regra 3) → Verify: quitação debita conta sem criar despesa de consumo
+- [x] **T3.6** Central de Parcelamentos em `/parcelamentos`: visão consolidada de parcelamentos com ou sem cartão, barra de progresso de parcelas (ex.: 5/12 - 42%), saldo devedor restante e cancelamento de parcelas futuras → Verify: cálculo de parcelas pagas e restantes
+- [x] **T3.7** Testes unitários do motor de cartões e parcelamentos no Vitest (`cards-and-installments.test.ts`) → Verify: 45/45 testes aprovados
+- [x] **T3.8** Verificação final da Fase 3: `npm.cmd run lint` (0 erros), `npx.cmd tsc --noEmit` (0 erros) e `npm.cmd run build` (sucesso) → Verify: build de produção concluído com êxito
+
+## Pronto quando (Fase 3)
+- [x] O usuário cadastra cartões de crédito, acompanha a utilização do limite, visualiza e quita faturas mensais (sem duplicar despesas, respeitando a Regra 3) e gerencia todos os parcelamentos ativos com cronograma de encerramento.
 
 ## Observações do ambiente
 - Node v24 e Git OK. **Docker não instalado** → Supabase local (CLI) inviável; usar **projeto Supabase na nuvem**.
