@@ -4,6 +4,7 @@ import { useCategories } from '@/hooks/use-categories'
 import { useCards } from '@/hooks/use-cards'
 import { useProperties } from '@/hooks/use-properties'
 import { formatBRL } from '@/lib/money'
+import { getTodayDateString } from '@/lib/date'
 import { Button } from '@/components/ui/button'
 import {
   FileSpreadsheet,
@@ -22,7 +23,7 @@ export default function RelatoriosPage() {
   const { cards } = useCards()
   const { properties } = useProperties()
 
-  const [todayStr] = useState(() => new Date().toISOString().substring(0, 10))
+  const [todayStr] = useState(() => getTodayDateString())
   const [selectedMonth, setSelectedMonth] = useState<string>(() => {
     const d = new Date()
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
@@ -33,6 +34,7 @@ export default function RelatoriosPage() {
     let grossIncome = 0
     let fixedExpenses = 0
     let variableExpenses = 0
+    let occasionalAndExtraExpenses = 0
     let investmentContributions = 0
     let mortgagePayments = 0
 
@@ -51,33 +53,48 @@ export default function RelatoriosPage() {
       } else if (t.property_id) {
         mortgagePayments += t.amount
       } else if (t.kind === 'expense' || t.kind === 'card_purchase') {
-        const catName = t.category_id ? categoryMap.get(t.category_id) || '' : ''
-        // Categorização simples para o DRE
-        if (
-          catName.includes('moradia') ||
-          catName.includes('aluguel') ||
-          catName.includes('condomínio') ||
-          catName.includes('energia') ||
-          catName.includes('água') ||
-          catName.includes('internet')
-        ) {
+        if (t.expense_classification === 'fixed') {
           fixedExpenses += t.amount
-        } else {
+        } else if (
+          t.expense_classification === 'occasional' ||
+          t.expense_classification === 'extraordinary'
+        ) {
+          occasionalAndExtraExpenses += t.amount
+        } else if (t.expense_classification === 'variable') {
           variableExpenses += t.amount
+        } else {
+          // Fallback para lançamentos antigos sem expense_classification explícito
+          const catName = t.category_id ? categoryMap.get(t.category_id) || '' : ''
+          if (
+            catName.includes('moradia') ||
+            catName.includes('aluguel') ||
+            catName.includes('condomínio') ||
+            catName.includes('energia') ||
+            catName.includes('água') ||
+            catName.includes('internet')
+          ) {
+            fixedExpenses += t.amount
+          } else {
+            variableExpenses += t.amount
+          }
         }
       }
     })
 
-    const totalConsumption = fixedExpenses + variableExpenses
+    const totalConsumption =
+      fixedExpenses + variableExpenses + occasionalAndExtraExpenses
     const operationalSurplus = grossIncome - totalConsumption
     const netCashFlow = operationalSurplus - investmentContributions - mortgagePayments
     const savingsRate =
-      grossIncome > 0 ? Math.round(((grossIncome - totalConsumption) / grossIncome) * 100) : 0
+      grossIncome > 0
+        ? Math.round(((grossIncome - totalConsumption) / grossIncome) * 100)
+        : 0
 
     return {
       grossIncome,
       fixedExpenses,
       variableExpenses,
+      occasionalAndExtraExpenses,
       totalConsumption,
       investmentContributions,
       mortgagePayments,
@@ -149,6 +166,7 @@ export default function RelatoriosPage() {
       'Data de Vencimento',
       'Data de Pagamento',
       'Tipo',
+      'Classificação',
       'Status',
       'Descrição',
       'Valor (R$)',
@@ -171,6 +189,17 @@ export default function RelatoriosPage() {
           ? 'Resgate Investimento'
           : 'Pagamento Fatura'
 
+      const classLabel =
+        t.expense_classification === 'fixed'
+          ? 'Fixo'
+          : t.expense_classification === 'variable'
+          ? 'Variável'
+          : t.expense_classification === 'occasional'
+          ? 'Eventual'
+          : t.expense_classification === 'extraordinary'
+          ? 'Extraordinário'
+          : ''
+
       const statusLabel =
         t.status === 'completed'
           ? 'Concluído'
@@ -184,6 +213,7 @@ export default function RelatoriosPage() {
         t.due_date,
         t.paid_date || '',
         typeLabel,
+        classLabel,
         statusLabel,
         `"${t.description.replace(/"/g, '""')}"`,
         `"${formattedAmount}"`,
@@ -204,27 +234,29 @@ export default function RelatoriosPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8 animate-in fade-in-50 duration-200">
       {/* Top Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between pb-2 border-b">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Relatórios & DRE Pessoal</h1>
-          <p className="text-sm text-muted-foreground">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
+            Relatórios & DRE Pessoal
+          </h1>
+          <p className="text-sm text-muted-foreground mt-0.5">
             Demonstrativo de Resultado do Exercício Pessoal, agenda de vencimentos e exportação de dados.
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-2">
             <span className="text-xs text-muted-foreground font-medium">Mês:</span>
             <input
               type="month"
               value={selectedMonth}
               onChange={(e) => setSelectedMonth(e.target.value)}
-              className="flex h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
+              className="flex h-9 rounded-md border border-input bg-background text-foreground px-3 py-1 text-sm shadow-2xs"
             />
           </div>
-          <Button onClick={handleExportCSV} className="gap-2">
+          <Button onClick={handleExportCSV} size="sm" className="gap-2 text-xs">
             <Download className="h-4 w-4" />
             Exportar CSV Excel
           </Button>
@@ -232,25 +264,25 @@ export default function RelatoriosPage() {
       </div>
 
       {/* DRE Pessoal Consolidado */}
-      <div className="rounded-xl border bg-card p-6 shadow-sm space-y-4">
+      <div className="rounded-2xl border bg-card p-6 shadow-xs space-y-4">
         <div className="flex items-center justify-between pb-3 border-b">
           <div className="flex items-center gap-2">
             <FileSpreadsheet className="h-5 w-5 text-primary" />
             <div>
               <h2 className="font-bold text-base">Demonstrativo de Resultado Pessoal (DRE)</h2>
               <p className="text-xs text-muted-foreground">
-                Estrutura contábil com separação clara entre despesas de consumo, aportes patrimoniais e financiamentos.
+                Estrutura contábil com separação clara entre despesas fixas, variáveis, eventuais, aportes e financiamentos.
               </p>
             </div>
           </div>
           <div className="text-right">
             <span className="text-xs text-muted-foreground">Taxa de Poupança Operacional</span>
-            <div className="text-lg font-bold text-primary">{dre.savingsRate}%</div>
+            <div className="tabular text-lg font-bold text-primary">{dre.savingsRate}%</div>
           </div>
         </div>
 
         {/* Linhas do DRE */}
-        <div className="space-y-2 text-sm">
+        <div className="space-y-2 text-sm tabular">
           {/* Receitas */}
           <div className="flex justify-between py-2 border-b font-medium text-emerald-600 dark:text-emerald-400">
             <span>(+) RECEITA BRUTA OPERACIONAL</span>
@@ -259,7 +291,7 @@ export default function RelatoriosPage() {
 
           {/* Despesas Fixas */}
           <div className="flex justify-between py-1.5 pl-4 text-muted-foreground">
-            <span>(&minus;) Custos Fixos (Moradia, Conectividade, Contas Básicas)</span>
+            <span>(&minus;) Custos Fixos (Moradia, Conectividade, Planos Recorrentes)</span>
             <span className="text-destructive font-medium">
               &minus;{formatBRL(dre.fixedExpenses)}
             </span>
@@ -267,9 +299,17 @@ export default function RelatoriosPage() {
 
           {/* Despesas Variáveis */}
           <div className="flex justify-between py-1.5 pl-4 text-muted-foreground">
-            <span>(&minus;) Custos Variáveis (Alimentação, Lazer, Consumo Livre)</span>
+            <span>(&minus;) Custos Variáveis (Alimentação, Combustível, Consumo)</span>
             <span className="text-destructive font-medium">
               &minus;{formatBRL(dre.variableExpenses)}
+            </span>
+          </div>
+
+          {/* Despesas Eventuais & Extraordinárias */}
+          <div className="flex justify-between py-1.5 pl-4 text-muted-foreground">
+            <span>(&minus;) Gastos Eventuais & Extraordinários (Imprevistos, Pontuais)</span>
+            <span className="text-destructive font-medium">
+              &minus;{formatBRL(dre.occasionalAndExtraExpenses)}
             </span>
           </div>
 
@@ -331,7 +371,7 @@ export default function RelatoriosPage() {
       </div>
 
       {/* Agenda e Próximos Vencimentos */}
-      <div className="rounded-xl border bg-card p-6 shadow-sm space-y-4">
+      <div className="rounded-2xl border bg-card p-6 shadow-xs space-y-4">
         <div className="flex items-center justify-between pb-3 border-b">
           <div className="flex items-center gap-2">
             <Clock className="h-5 w-5 text-amber-500" />
@@ -342,20 +382,24 @@ export default function RelatoriosPage() {
               </p>
             </div>
           </div>
-          <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-600">
-            {upcomingBills.length} compromisso{upcomingBills.length !== 1 ? 's' : ''} mapeado{upcomingBills.length !== 1 ? 's' : ''}
+          <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400">
+            {upcomingBills.length} compromisso{upcomingBills.length !== 1 ? 's' : ''} mapeado
+            {upcomingBills.length !== 1 ? 's' : ''}
           </span>
         </div>
 
         {upcomingBills.length === 0 ? (
-          <div className="p-8 text-center text-sm text-emerald-600 font-medium">
+          <div className="p-8 text-center text-sm text-emerald-600 dark:text-emerald-400 font-medium">
             <CheckCircle2 className="h-8 w-8 mx-auto mb-2 text-emerald-500" />
             Nenhuma conta ou compromisso pendente no momento!
           </div>
         ) : (
           <div className="divide-y divide-border">
             {upcomingBills.map((b) => (
-              <div key={b.id} className="py-3 flex items-center justify-between hover:bg-muted/20 px-2 rounded-lg transition-colors">
+              <div
+                key={b.id}
+                className="py-3 flex items-center justify-between hover:bg-muted/20 px-2 rounded-lg transition-colors"
+              >
                 <div className="flex items-center gap-3">
                   <div className="h-9 w-9 rounded-lg bg-muted flex items-center justify-center text-muted-foreground">
                     {b.type === 'invoice' ? (
@@ -374,7 +418,7 @@ export default function RelatoriosPage() {
                   </div>
                 </div>
 
-                <div className="text-right">
+                <div className="text-right tabular">
                   <div className="font-bold text-sm text-foreground">
                     {formatBRL(b.amount)}
                   </div>

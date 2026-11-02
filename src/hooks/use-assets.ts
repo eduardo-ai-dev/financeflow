@@ -5,15 +5,18 @@ import {
   updateAsset as updateAssetService,
   deleteAsset as deleteAssetService,
 } from '@/services/assets'
+import { useAuth } from '@/hooks/use-auth'
 import type { Asset } from '@/types/database'
 import type { AssetFormData } from '@/lib/validations/asset'
 
 export function useAssets() {
+  const { user } = useAuth()
   const queryClient = useQueryClient()
 
   const { data: assets = [], isLoading, error } = useQuery({
-    queryKey: ['assets'],
+    queryKey: ['assets', user?.id],
     queryFn: fetchAssets,
+    enabled: !!user?.id,
   })
 
   function invalidateAll() {
@@ -51,4 +54,3 @@ export function useAssets() {
 }
 
 export type { Asset }
-

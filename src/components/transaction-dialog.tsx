@@ -1,13 +1,15 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import {
   transactionSchema,
+  expenseClassifications,
   type TransactionFormData,
 } from '@/lib/validations/transaction'
 import { useTransactions, type TransactionWithDetails } from '@/hooks/use-transactions'
 import { useAccounts } from '@/hooks/use-accounts'
 import { useCategories } from '@/hooks/use-categories'
+import { getTodayDateString } from '@/lib/date'
 import {
   Dialog,
   DialogContent,
@@ -19,7 +21,17 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { AlertCircle, Loader2, ArrowRightLeft, ArrowDownLeft, ArrowUpRight } from 'lucide-react'
+import {
+  AlertCircle,
+  Loader2,
+  ArrowRightLeft,
+  ArrowDownLeft,
+  ArrowUpRight,
+  Plus,
+  Sparkles,
+  Landmark,
+  Tag,
+} from 'lucide-react'
 
 interface TransactionDialogProps {
   open: boolean
@@ -27,14 +39,6 @@ interface TransactionDialogProps {
   transactionToEdit?: TransactionWithDetails | null
   initialKind?: 'income' | 'expense' | 'transfer'
   defaultAccountId?: string
-}
-
-function getTodayString() {
-  const d = new Date()
-  const year = d.getFullYear()
-  const month = String(d.getMonth() + 1).padStart(2, '0')
-  const day = String(d.getDate()).padStart(2, '0')
-  return `${year}-${month}-${day}`
 }
 
 export function TransactionDialog({
@@ -45,17 +49,33 @@ export function TransactionDialog({
   defaultAccountId,
 }: TransactionDialogProps) {
   const { createTransaction, updateTransaction } = useTransactions()
-  const { accounts } = useAccounts()
-  const { categoryTree } = useCategories()
+  const { accounts, createAccount, isCreating: isCreatingAccount } = useAccounts()
+  const {
+    categories,
+    isLoading: isLoadingCategories,
+    categoryTree,
+    createCategory,
+    isCreating: isCreatingCategory,
+    seedDefaultCategories,
+    isSeeding,
+  } = useCategories()
+
   const [serverError, setServerError] = useState<string | null>(null)
+  const [showQuickCategory, setShowQuickCategory] = useState(false)
+  const [quickCategoryName, setQuickCategoryName] = useState('')
+  const autoSeededRef = useRef(false)
 
   const isEditing = !!transactionToEdit
-  const activeAccounts = accounts.filter((a) => !a.is_archived)
+  const activeAccounts = useMemo(
+    () => accounts.filter((a) => !a.is_archived),
+    [accounts]
+  )
 
   const {
     register,
     handleSubmit,
     setValue,
+    getValues,
     control,
     reset,
     formState: { errors, isSubmitting },
@@ -68,9 +88,10 @@ export function TransactionDialog({
       account_id: defaultAccountId || (activeAccounts[0]?.id ?? ''),
       to_account_id: null,
       category_id: null,
+      expense_classification: 'variable',
       status: 'completed',
-      due_date: getTodayString(),
-      paid_date: getTodayString(),
+      due_date: getTodayDateString(),
+      paid_date: getTodayDateString(),
       notes: '',
     },
   })
@@ -80,28 +101,44 @@ export function TransactionDialog({
   const selectedAccountId = useWatch({ control, name: 'account_id' })
   const selectedToAccountId = useWatch({ control, name: 'to_account_id' })
   const selectedCategoryId = useWatch({ control, name: 'category_id' })
+  const selectedClassification = useWatch({
+    control,
+    name: 'expense_classification',
+    defaultValue: 'variable',
+  })
 
   // Hierarquia de categorias filtrada pelo tipo atual (income ou expense)
-  const currentCategoryTree = categoryTree(
-    selectedKind === 'income' ? 'income' : 'expense'
+  const currentCategoryTree = useMemo(
+    () => categoryTree(selectedKind === 'income' ? 'income' : 'expense'),
+    [categoryTree, selectedKind]
   )
 
+  // Reseta o formulário APENAS quando o modal abre ou o registro em edição muda
   useEffect(() => {
+    if (!open) return
+
+    setServerError(null)
+    setShowQuickCategory(false)
+    setQuickCategoryName('')
+
     if (transactionToEdit) {
       reset({
-        kind: (transactionToEdit.kind === 'transfer' ? 'transfer' : transactionToEdit.kind) as 'income' | 'expense' | 'transfer',
+        kind: (
+          transactionToEdit.kind === 'transfer' ? 'transfer' : transactionToEdit.kind
+        ) as 'income' | 'expense' | 'transfer',
         description: transactionToEdit.description,
         amount: Number(transactionToEdit.amount),
         account_id: transactionToEdit.account_id || '',
         to_account_id: transactionToEdit.to_account_id,
         category_id: transactionToEdit.category_id,
+        expense_classification: transactionToEdit.expense_classification || 'variable',
         status: transactionToEdit.status === 'canceled' ? 'pending' : transactionToEdit.status,
         due_date: transactionToEdit.due_date,
         paid_date: transactionToEdit.paid_date || transactionToEdit.due_date,
         notes: transactionToEdit.notes || '',
       })
     } else {
-      const today = getTodayString()
+      const today = getTodayDateString()
       reset({
         kind: initialKind,
         description: '',
@@ -109,19 +146,98 @@ export function TransactionDialog({
         account_id: defaultAccountId || (activeAccounts[0]?.id ?? ''),
         to_account_id: null,
         category_id: null,
+        expense_classification: initialKind === 'expense' ? 'variable' : null,
         status: 'completed',
         due_date: today,
         paid_date: today,
         notes: '',
       })
     }
-  }, [transactionToEdit, initialKind, defaultAccountId, reset, open, activeAccounts])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, transactionToEdit, initialKind, defaultAccountId, reset])
+
+  // Se as contas terminarem de carregar depois que o modal abriu e account_id estiver vazio, preenche automaticamente
+  useEffect(() => {
+    if (!open) return
+    const currentAcc = getValues('account_id')
+    if (!currentAcc && activeAccounts.length > 0) {
+      setValue('account_id', defaultAccountId || activeAccounts[0].id, {
+        shouldValidate: true,
+      })
+    }
+  }, [open, activeAccounts, defaultAccountId, getValues, setValue])
+
+  // Auto-inicializa categorias padrão na primeira vez caso o banco do usuário não tenha nenhuma categoria
+  useEffect(() => {
+    if (
+      open &&
+      !isLoadingCategories &&
+      categories.length === 0 &&
+      !isSeeding &&
+      !autoSeededRef.current
+    ) {
+      autoSeededRef.current = true
+      seedDefaultCategories().catch(() => {
+        // Silencioso; o usuário ainda pode clicar no botão manual se desejar
+      })
+    }
+  }, [open, isLoadingCategories, categories.length, isSeeding, seedDefaultCategories])
 
   const handleDialogChange = (nextOpen: boolean) => {
     if (!nextOpen) {
       setServerError(null)
+      setShowQuickCategory(false)
     }
     onOpenChange(nextOpen)
+  }
+
+  async function handleQuickCreateAccount() {
+    setServerError(null)
+    try {
+      const created = await createAccount({
+        name: 'Conta Principal',
+        institution: 'Banco Principal',
+        type: 'checking',
+        opening_balance: 0,
+        color: '#10b981',
+      })
+      setValue('account_id', created.id, { shouldValidate: true })
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Erro ao criar conta padrão'
+      setServerError(msg)
+    }
+  }
+
+  async function handleQuickCreateCategory() {
+    const trimmed = quickCategoryName.trim()
+    if (!trimmed) return
+    setServerError(null)
+    try {
+      const targetKind = selectedKind === 'income' ? 'income' : 'expense'
+      const created = await createCategory({
+        name: trimmed,
+        kind: targetKind,
+        parent_id: null,
+        color: targetKind === 'income' ? '#10b981' : '#f59e0b',
+        icon: 'Tag',
+      })
+      setValue('category_id', created.id, { shouldValidate: true })
+      setQuickCategoryName('')
+      setShowQuickCategory(false)
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Erro ao criar categoria'
+      setServerError(msg)
+    }
+  }
+
+  async function handleSeedCategories() {
+    setServerError(null)
+    try {
+      await seedDefaultCategories()
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Erro ao carregar categorias padrão'
+      setServerError(msg)
+    }
   }
 
   async function onSubmit(data: TransactionFormData) {
@@ -152,7 +268,7 @@ export function TransactionDialog({
           <DialogDescription>
             {isEditing
               ? 'Altere os dados da movimentação financeira.'
-              : 'Registre uma despesa, receita ou transferência entre suas contas.'}
+              : 'Registre uma despesa, receita (entrada) ou transferência entre suas contas.'}
           </DialogDescription>
         </DialogHeader>
 
@@ -166,15 +282,19 @@ export function TransactionDialog({
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 py-2">
           {/* Seletor de Tipo (Despesa / Receita / Transferência) */}
           {!isEditing && (
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-3 gap-2" role="tablist" aria-label="Tipo de lançamento">
               <button
                 type="button"
+                role="tab"
+                aria-selected={selectedKind === 'expense'}
                 disabled={isSubmitting}
                 onClick={() => {
-                  setValue('kind', 'expense')
+                  setValue('kind', 'expense', { shouldDirty: true })
                   setValue('to_account_id', null)
+                  setValue('category_id', null)
+                  setValue('expense_classification', 'variable')
                 }}
-                className={`flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl border text-xs font-semibold transition-all ${
+                className={`flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl border text-xs font-semibold transition-all cursor-pointer ${
                   selectedKind === 'expense'
                     ? 'border-rose-500 bg-rose-500/10 text-rose-500 shadow-xs'
                     : 'border-border text-muted-foreground hover:bg-muted'
@@ -186,12 +306,16 @@ export function TransactionDialog({
 
               <button
                 type="button"
+                role="tab"
+                aria-selected={selectedKind === 'income'}
                 disabled={isSubmitting}
                 onClick={() => {
-                  setValue('kind', 'income')
+                  setValue('kind', 'income', { shouldDirty: true })
                   setValue('to_account_id', null)
+                  setValue('category_id', null)
+                  setValue('expense_classification', null)
                 }}
-                className={`flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl border text-xs font-semibold transition-all ${
+                className={`flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl border text-xs font-semibold transition-all cursor-pointer ${
                   selectedKind === 'income'
                     ? 'border-emerald-500 bg-emerald-500/10 text-emerald-500 shadow-xs'
                     : 'border-border text-muted-foreground hover:bg-muted'
@@ -203,12 +327,15 @@ export function TransactionDialog({
 
               <button
                 type="button"
+                role="tab"
+                aria-selected={selectedKind === 'transfer'}
                 disabled={isSubmitting}
                 onClick={() => {
-                  setValue('kind', 'transfer')
+                  setValue('kind', 'transfer', { shouldDirty: true })
                   setValue('category_id', null)
+                  setValue('expense_classification', null)
                 }}
-                className={`flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl border text-xs font-semibold transition-all ${
+                className={`flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl border text-xs font-semibold transition-all cursor-pointer ${
                   selectedKind === 'transfer'
                     ? 'border-blue-500 bg-blue-500/10 text-blue-500 shadow-xs'
                     : 'border-border text-muted-foreground hover:bg-muted'
@@ -220,7 +347,39 @@ export function TransactionDialog({
             </div>
           )}
 
-          {/* Valor (R$) e Descrição */}
+          {/* Alerta de criação rápida caso o usuário ainda não tenha nenhuma conta cadastrada */}
+          {activeAccounts.length === 0 && (
+            <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3.5 space-y-2.5">
+              <div className="flex items-start gap-2.5">
+                <Landmark className="size-4 text-amber-500 shrink-0 mt-0.5" />
+                <div className="space-y-0.5">
+                  <p className="text-xs font-semibold text-foreground">
+                    Nenhuma conta bancária ativa encontrada
+                  </p>
+                  <p className="text-[11px] text-muted-foreground">
+                    Para registrar uma entrada ou saída, vincule-a a uma conta ou carteira.
+                  </p>
+                </div>
+              </div>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                disabled={isCreatingAccount}
+                onClick={handleQuickCreateAccount}
+                className="w-full text-xs h-8 border-amber-500/40 hover:bg-amber-500/20"
+              >
+                {isCreatingAccount ? (
+                  <Loader2 className="size-3.5 mr-1.5 animate-spin" />
+                ) : (
+                  <Plus className="size-3.5 mr-1.5" />
+                )}
+                Criar &ldquo;Conta Principal&rdquo; Agora (1 Clique)
+              </Button>
+            </div>
+          )}
+
+          {/* Valor (R$) e Data */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <Label htmlFor="tx-amount">Valor (R$) *</Label>
@@ -260,16 +419,17 @@ export function TransactionDialog({
             </div>
           </div>
 
+          {/* Descrição */}
           <div className="space-y-1.5">
             <Label htmlFor="tx-description">Descrição *</Label>
             <Input
               id="tx-description"
               placeholder={
                 selectedKind === 'transfer'
-                  ? 'Ex.: Transferência Nubank para Poupança'
+                  ? 'Ex.: Transferência Nubank para Reserva'
                   : selectedKind === 'income'
-                  ? 'Ex.: Salário Mensal, Freelance...'
-                  : 'Ex.: Supermercado, Almoço, Conta de Luz...'
+                  ? 'Ex.: Salário Mensal, Freelance, Dividendos...'
+                  : 'Ex.: Supermercado, Aluguel, Conta de Luz...'
               }
               disabled={isSubmitting}
               {...register('description')}
@@ -279,7 +439,46 @@ export function TransactionDialog({
             )}
           </div>
 
-          {/* Configuração de Contas */}
+          {/* Classificação / Tipo de Gasto (somente para Despesas, conforme README.md) */}
+          {selectedKind === 'expense' && (
+            <div className="space-y-1.5">
+              <Label>Tipo / Classificação de Gasto</Label>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                {expenseClassifications.map((item) => {
+                  const isActive = (selectedClassification || 'variable') === item.value
+                  return (
+                    <button
+                      key={item.value}
+                      type="button"
+                      disabled={isSubmitting}
+                      title={item.description}
+                      onClick={() =>
+                        setValue('expense_classification', item.value, {
+                          shouldDirty: true,
+                        })
+                      }
+                      className={`flex flex-col items-center justify-center rounded-lg border px-2.5 py-2 text-xs transition-all cursor-pointer ${
+                        isActive
+                          ? 'border-primary bg-primary/10 text-primary font-semibold shadow-2xs'
+                          : 'border-border bg-card text-muted-foreground hover:bg-muted/60 hover:text-foreground'
+                      }`}
+                    >
+                      <span>{item.label}</span>
+                    </button>
+                  )
+                })}
+              </div>
+              <p className="text-[11px] text-muted-foreground">
+                {
+                  expenseClassifications.find(
+                    (c) => c.value === (selectedClassification || 'variable')
+                  )?.description
+                }
+              </p>
+            </div>
+          )}
+
+          {/* Configuração de Contas e Categorias */}
           {selectedKind === 'transfer' ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
@@ -288,14 +487,23 @@ export function TransactionDialog({
                   id="tx-from-account"
                   disabled={isSubmitting}
                   value={selectedAccountId || ''}
-                  onChange={(e) => setValue('account_id', e.target.value)}
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  onChange={(e) =>
+                    setValue('account_id', e.target.value, {
+                      shouldValidate: true,
+                      shouldDirty: true,
+                    })
+                  }
+                  className="flex h-10 w-full rounded-md border border-input bg-background text-foreground px-3 py-2 text-sm ring-offset-background focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  <option value="" disabled>
+                  <option value="" disabled className="bg-popover text-popover-foreground">
                     Selecione a conta
                   </option>
                   {activeAccounts.map((acc) => (
-                    <option key={acc.id} value={acc.id}>
+                    <option
+                      key={acc.id}
+                      value={acc.id}
+                      className="bg-popover text-popover-foreground"
+                    >
                       {acc.name}
                     </option>
                   ))}
@@ -311,16 +519,25 @@ export function TransactionDialog({
                   id="tx-to-account"
                   disabled={isSubmitting}
                   value={selectedToAccountId || ''}
-                  onChange={(e) => setValue('to_account_id', e.target.value)}
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  onChange={(e) =>
+                    setValue('to_account_id', e.target.value, {
+                      shouldValidate: true,
+                      shouldDirty: true,
+                    })
+                  }
+                  className="flex h-10 w-full rounded-md border border-input bg-background text-foreground px-3 py-2 text-sm ring-offset-background focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  <option value="" disabled>
+                  <option value="" disabled className="bg-popover text-popover-foreground">
                     Selecione a conta
                   </option>
                   {activeAccounts
                     .filter((acc) => acc.id !== selectedAccountId)
                     .map((acc) => (
-                      <option key={acc.id} value={acc.id}>
+                      <option
+                        key={acc.id}
+                        value={acc.id}
+                        className="bg-popover text-popover-foreground"
+                      >
                         {acc.name}
                       </option>
                     ))}
@@ -333,19 +550,30 @@ export function TransactionDialog({
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <Label htmlFor="tx-account">Conta *</Label>
+                <Label htmlFor="tx-account">
+                  {selectedKind === 'income' ? 'Conta de Destino *' : 'Conta de Pagamento *'}
+                </Label>
                 <select
                   id="tx-account"
                   disabled={isSubmitting}
                   value={selectedAccountId || ''}
-                  onChange={(e) => setValue('account_id', e.target.value)}
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  onChange={(e) =>
+                    setValue('account_id', e.target.value, {
+                      shouldValidate: true,
+                      shouldDirty: true,
+                    })
+                  }
+                  className="flex h-10 w-full rounded-md border border-input bg-background text-foreground px-3 py-2 text-sm ring-offset-background focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  <option value="" disabled>
+                  <option value="" disabled className="bg-popover text-popover-foreground">
                     Selecione a conta
                   </option>
                   {activeAccounts.map((acc) => (
-                    <option key={acc.id} value={acc.id}>
+                    <option
+                      key={acc.id}
+                      value={acc.id}
+                      className="bg-popover text-popover-foreground"
+                    >
                       {acc.name}
                     </option>
                   ))}
@@ -356,26 +584,110 @@ export function TransactionDialog({
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="tx-category">Categoria</Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="tx-category">
+                    {selectedKind === 'income' ? 'Categoria de Receita' : 'Categoria de Gasto'}
+                  </Label>
+                  <button
+                    type="button"
+                    onClick={() => setShowQuickCategory((prev) => !prev)}
+                    className="inline-flex items-center gap-1 text-[11px] font-semibold text-primary hover:underline cursor-pointer"
+                  >
+                    <Plus className="size-3" />
+                    {showQuickCategory ? 'Fechar' : 'Nova categoria'}
+                  </button>
+                </div>
+
                 <select
                   id="tx-category"
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || isSeeding}
                   value={selectedCategoryId || ''}
-                  onChange={(e) => setValue('category_id', e.target.value || null)}
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  onChange={(e) =>
+                    setValue('category_id', e.target.value || null, {
+                      shouldValidate: true,
+                      shouldDirty: true,
+                    })
+                  }
+                  className="flex h-10 w-full rounded-md border border-input bg-background text-foreground px-3 py-2 text-sm ring-offset-background focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  <option value="">Sem categoria</option>
+                  <option value="" className="bg-popover text-popover-foreground">
+                    {isSeeding ? 'Carregando categorias...' : 'Selecione uma categoria'}
+                  </option>
                   {currentCategoryTree.map((parent) => (
-                    <optgroup key={parent.id} label={parent.name}>
-                      <option value={parent.id}>{parent.name} (Geral)</option>
+                    <optgroup
+                      key={parent.id}
+                      label={parent.name}
+                      className="bg-popover text-popover-foreground font-semibold"
+                    >
+                      <option
+                        value={parent.id}
+                        className="bg-popover text-popover-foreground font-normal"
+                      >
+                        {parent.name} (Geral)
+                      </option>
                       {(parent.children || []).map((sub) => (
-                        <option key={sub.id} value={sub.id}>
+                        <option
+                          key={sub.id}
+                          value={sub.id}
+                          className="bg-popover text-popover-foreground font-normal"
+                        >
                           &nbsp;&nbsp;↳ {sub.name}
                         </option>
                       ))}
                     </optgroup>
                   ))}
                 </select>
+
+                {/* Botão rápido se não houver categorias carregadas */}
+                {currentCategoryTree.length === 0 && !isSeeding && (
+                  <button
+                    type="button"
+                    onClick={handleSeedCategories}
+                    className="inline-flex items-center gap-1.5 text-[11px] font-medium text-primary hover:underline pt-0.5 cursor-pointer"
+                  >
+                    <Sparkles className="size-3" />
+                    Carregar categorias padrão de {selectedKind === 'income' ? 'Receitas' : 'Despesas'}
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Criação rápida inline de categoria */}
+          {showQuickCategory && selectedKind !== 'transfer' && (
+            <div className="rounded-xl border border-primary/30 bg-primary/5 p-3 space-y-2 animate-in fade-in-50 duration-150">
+              <div className="flex items-center gap-1.5 text-xs font-semibold text-primary">
+                <Tag className="size-3.5" />
+                <span>
+                  Criar nova categoria de{' '}
+                  {selectedKind === 'income' ? 'Receita (Entrada)' : 'Despesa (Saída)'}
+                </span>
+              </div>
+              <div className="flex gap-2">
+                <Input
+                  value={quickCategoryName}
+                  onChange={(e) => setQuickCategoryName(e.target.value)}
+                  placeholder={
+                    selectedKind === 'income'
+                      ? 'Ex.: Salário, Consultoria, Aluguel Recebido...'
+                      : 'Ex.: Supermercado, Saúde, Assinaturas...'
+                  }
+                  className="h-8 text-xs bg-background"
+                  disabled={isCreatingCategory}
+                />
+                <Button
+                  type="button"
+                  size="sm"
+                  className="h-8 text-xs shrink-0"
+                  disabled={isCreatingCategory || !quickCategoryName.trim()}
+                  onClick={handleQuickCreateCategory}
+                >
+                  {isCreatingCategory ? (
+                    <Loader2 className="size-3.5 animate-spin" />
+                  ) : (
+                    'Adicionar'
+                  )}
+                </Button>
               </div>
             </div>
           )}
@@ -385,25 +697,27 @@ export function TransactionDialog({
             <div>
               <Label className="text-sm font-medium">
                 {selectedKind === 'income'
-                  ? 'Recebido?'
+                  ? 'Já foi recebido?'
                   : selectedKind === 'transfer'
                   ? 'Transferência já efetivada?'
-                  : 'Pago?'}
+                  : 'Já foi pago?'}
               </Label>
               <p className="text-xs text-muted-foreground">
                 {selectedStatus === 'completed'
-                  ? 'Movimenta o saldo atual imediatamente.'
-                  : 'Fica agendado como pendente (saldo previsto).'}
+                  ? 'Movimenta o saldo atual da conta imediatamente.'
+                  : 'Fica agendado como pendente (compõe o saldo previsto).'}
               </p>
             </div>
             <button
               type="button"
+              role="switch"
+              aria-checked={selectedStatus === 'completed'}
               disabled={isSubmitting}
               onClick={() => {
                 const nextStatus = selectedStatus === 'completed' ? 'pending' : 'completed'
-                setValue('status', nextStatus)
+                setValue('status', nextStatus, { shouldDirty: true })
                 if (nextStatus === 'completed') {
-                  setValue('paid_date', getTodayString())
+                  setValue('paid_date', getTodayDateString())
                 } else {
                   setValue('paid_date', null)
                 }
@@ -442,7 +756,13 @@ export function TransactionDialog({
             </Button>
             <Button type="submit" disabled={isSubmitting}>
               {isSubmitting && <Loader2 className="size-4 mr-2 animate-spin" />}
-              {isEditing ? 'Salvar Alterações' : 'Confirmar Lançamento'}
+              {isEditing
+                ? 'Salvar Alterações'
+                : selectedKind === 'income'
+                ? 'Confirmar Entrada'
+                : selectedKind === 'transfer'
+                ? 'Confirmar Transferência'
+                : 'Confirmar Despesa'}
             </Button>
           </DialogFooter>
         </form>

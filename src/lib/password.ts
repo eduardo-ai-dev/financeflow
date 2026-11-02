@@ -210,3 +210,4 @@ export function evaluatePasswordStrength(
 
   return { score, label: PASSWORD_LEVEL_LABELS[score], checks, isStrong }
 }
+

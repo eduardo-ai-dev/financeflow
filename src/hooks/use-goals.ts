@@ -9,14 +9,17 @@ import {
   type GoalWithStats,
   type ConvertGoalParams,
 } from '@/services/goals'
+import { useAuth } from '@/hooks/use-auth'
 import type { GoalFormData } from '@/lib/validations/goal'
 
 export function useGoals() {
+  const { user } = useAuth()
   const queryClient = useQueryClient()
 
   const { data: goals = [], isLoading, error } = useQuery({
-    queryKey: ['goals'],
+    queryKey: ['goals', user?.id],
     queryFn: fetchGoals,
+    enabled: !!user?.id,
   })
 
   function invalidateAll() {
@@ -71,4 +74,3 @@ export function useGoals() {
 }
 
 export type { GoalWithStats }
-

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useGoals, type GoalWithStats } from '@/hooks/use-goals'
 import { useAccounts } from '@/hooks/use-accounts'
 import { assetTypes } from '@/lib/validations/asset'
+import { getTodayDateString } from '@/lib/date'
 import type { AssetType } from '@/types/database'
 import {
   Dialog,
@@ -22,19 +23,11 @@ interface GoalConvertDialogProps {
   onOpenChange: (open: boolean) => void
 }
 
-function getTodayString() {
-  const d = new Date()
-  const year = d.getFullYear()
-  const month = String(d.getMonth() + 1).padStart(2, '0')
-  const day = String(d.getDate()).padStart(2, '0')
-  return `${year}-${month}-${day}`
-}
-
 export function GoalConvertDialog({ goal, open, onOpenChange }: GoalConvertDialogProps) {
   const { convertGoalToAsset, isConverting } = useGoals()
   const { accounts } = useAccounts()
 
-  const [todayStr] = useState(() => getTodayString())
+  const [todayStr] = useState(() => getTodayDateString())
   const [assetName, setAssetName] = useState(goal?.name || '')
   const [finalPrice, setFinalPrice] = useState(goal ? String(goal.target_amount) : '')
   const [purchaseDate, setPurchaseDate] = useState(todayStr)
@@ -120,6 +113,7 @@ export function GoalConvertDialog({ goal, open, onOpenChange }: GoalConvertDialo
                 id="convert-final-price"
                 type="number"
                 step="0.01"
+                className="tabular"
                 value={finalPrice}
                 onChange={(e) => setFinalPrice(e.target.value)}
               />
@@ -139,7 +133,7 @@ export function GoalConvertDialog({ goal, open, onOpenChange }: GoalConvertDialo
             <Label htmlFor="convert-asset-type">Classificação Patrimonial</Label>
             <select
               id="convert-asset-type"
-              className="mt-1 flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              className="mt-1 flex h-10 w-full rounded-md border border-input bg-background text-foreground px-3 py-2 text-sm shadow-2xs transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
               value={assetType}
               onChange={(e) => setAssetType(e.target.value as AssetType)}
             >
@@ -151,7 +145,7 @@ export function GoalConvertDialog({ goal, open, onOpenChange }: GoalConvertDialo
             </select>
           </div>
 
-          <div className="rounded-md border p-3 space-y-3 bg-muted/30">
+          <div className="rounded-xl border p-3.5 space-y-3 bg-muted/20">
             <div className="flex items-center justify-between">
               <div>
                 <Label htmlFor="register-expense-toggle" className="font-medium cursor-pointer">
@@ -166,7 +160,7 @@ export function GoalConvertDialog({ goal, open, onOpenChange }: GoalConvertDialo
                 type="checkbox"
                 checked={registerExpense}
                 onChange={(e) => setRegisterExpense(e.target.checked)}
-                className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                className="h-4 w-4 rounded border-input accent-primary cursor-pointer"
               />
             </div>
 
@@ -175,7 +169,7 @@ export function GoalConvertDialog({ goal, open, onOpenChange }: GoalConvertDialo
                 <Label htmlFor="convert-account">Conta de Pagamento</Label>
                 <select
                   id="convert-account"
-                  className="mt-1 flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                  className="mt-1 flex h-10 w-full rounded-md border border-input bg-background text-foreground px-3 py-2 text-sm shadow-2xs transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
                   value={accountId}
                   onChange={(e) => setAccountId(e.target.value)}
                 >

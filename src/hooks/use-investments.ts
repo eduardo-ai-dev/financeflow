@@ -8,19 +8,23 @@ import {
   addInvestmentTransaction as addTxService,
   type InvestmentWithStats,
 } from '@/services/investments'
+import { useAuth } from '@/hooks/use-auth'
 import type { InvestmentFormData, InvestmentTxFormData } from '@/lib/validations/investment'
 
 export function useInvestments(selectedInvestmentId?: string) {
+  const { user } = useAuth()
   const queryClient = useQueryClient()
 
   const { data: investments = [], isLoading, error } = useQuery({
-    queryKey: ['investments'],
+    queryKey: ['investments', user?.id],
     queryFn: fetchInvestments,
+    enabled: !!user?.id,
   })
 
   const { data: transactions = [], isLoading: isLoadingTx } = useQuery({
-    queryKey: ['investment-transactions', selectedInvestmentId],
+    queryKey: ['investment-transactions', user?.id, selectedInvestmentId],
     queryFn: () => fetchInvestmentTransactions(selectedInvestmentId),
+    enabled: !!user?.id,
   })
 
   function invalidateAll() {
@@ -69,4 +73,3 @@ export function useInvestments(selectedInvestmentId?: string) {
 }
 
 export type { InvestmentWithStats }
-

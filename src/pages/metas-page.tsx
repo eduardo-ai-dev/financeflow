@@ -5,6 +5,7 @@ import { GoalDialog } from '@/components/goal-dialog'
 import { GoalContributeDialog } from '@/components/goal-contribute-dialog'
 import { GoalConvertDialog } from '@/components/goal-convert-dialog'
 import { Button } from '@/components/ui/button'
+import { Skeleton } from '@/components/ui/skeleton'
 import {
   Target,
   Plus,
@@ -24,13 +25,16 @@ type TabType = 'active' | 'wishlist' | 'completed'
 export default function MetasPage() {
   const { goals, isLoading, deleteGoal } = useGoals()
   const [activeTab, setActiveTab] = useState<TabType>('active')
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
 
   // Modais
   const [goalDialogOpen, setGoalDialogOpen] = useState(false)
   const [editingGoal, setEditingGoal] = useState<GoalWithStats | null>(null)
   const [contributeGoal, setContributeGoal] = useState<GoalWithStats | null>(null)
   const [convertGoal, setConvertGoal] = useState<GoalWithStats | null>(null)
-  const [defaultNewStatus, setDefaultNewStatus] = useState<'planned' | 'in_progress'>('in_progress')
+  const [defaultNewStatus, setDefaultNewStatus] = useState<'planned' | 'in_progress'>(
+    'in_progress'
+  )
 
   const activeGoals = goals.filter((g) => g.status === 'in_progress')
   const wishlistGoals = goals.filter((g) => g.status === 'planned')
@@ -53,17 +57,16 @@ export default function MetasPage() {
     setGoalDialogOpen(true)
   }
 
-  async function handleDelete(goal: GoalWithStats) {
-    if (confirm(`Tem certeza que deseja remover a meta "${goal.name}"?`)) {
-      await deleteGoal(goal.id)
-    }
+  async function handleConfirmDelete(id: string) {
+    await deleteGoal(id)
+    setConfirmDeleteId(null)
   }
 
   function getPriorityBadge(priority: string) {
     switch (priority) {
       case 'essential':
         return (
-          <span className="rounded-full bg-red-500/10 px-2 py-0.5 text-xs font-medium text-red-600 dark:text-red-400">
+          <span className="rounded-full bg-rose-500/10 px-2 py-0.5 text-xs font-medium text-rose-600 dark:text-rose-400">
             Essencial
           </span>
         )
@@ -81,7 +84,7 @@ export default function MetasPage() {
         )
       default:
         return (
-          <span className="rounded-full bg-slate-500/10 px-2 py-0.5 text-xs font-medium text-slate-600 dark:text-slate-400">
+          <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
             Desejo
           </span>
         )
@@ -89,21 +92,32 @@ export default function MetasPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8 animate-in fade-in-50 duration-200">
       {/* Top Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between pb-2 border-b">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Metas & Wishlist de Compras</h1>
-          <p className="text-sm text-muted-foreground">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
+            Metas & Wishlist de Compras
+          </h1>
+          <p className="text-sm text-muted-foreground mt-0.5">
             Planeje objetivos de curto e longo prazo, acompanhe a poupança e converta compras em patrimônio real.
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={() => openNewGoal('planned')} className="gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => openNewGoal('planned')}
+            className="gap-1.5 text-xs"
+          >
             <ShoppingBag className="h-4 w-4" />
             + Wishlist
           </Button>
-          <Button onClick={() => openNewGoal('in_progress')} className="gap-2">
+          <Button
+            size="sm"
+            onClick={() => openNewGoal('in_progress')}
+            className="gap-1.5 text-xs"
+          >
             <Plus className="h-4 w-4" />
             Nova Meta
           </Button>
@@ -112,24 +126,30 @@ export default function MetasPage() {
 
       {/* Métricas do Módulo */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="rounded-xl border bg-card p-4 shadow-sm">
+        <div className="rounded-2xl border bg-card p-5 shadow-xs">
           <div className="flex items-center justify-between text-muted-foreground">
-            <span className="text-xs font-medium">Metas em Poupança</span>
+            <span className="text-xs font-semibold uppercase tracking-wider">
+              Metas em Poupança
+            </span>
             <Target className="h-4 w-4 text-primary" />
           </div>
-          <div className="mt-2 text-2xl font-bold">{formatCurrency(totalTargetActive)}</div>
+          <div className="mt-2 tabular text-2xl font-bold">
+            {isLoading ? <Skeleton className="h-8 w-32" /> : formatCurrency(totalTargetActive)}
+          </div>
           <p className="text-xs text-muted-foreground mt-1">
             {activeGoals.length} meta{activeGoals.length !== 1 ? 's' : ''} em andamento
           </p>
         </div>
 
-        <div className="rounded-xl border bg-card p-4 shadow-sm">
+        <div className="rounded-2xl border bg-card p-5 shadow-xs">
           <div className="flex items-center justify-between text-muted-foreground">
-            <span className="text-xs font-medium">Total Já Guardado</span>
+            <span className="text-xs font-semibold uppercase tracking-wider">
+              Total Já Guardado
+            </span>
             <PiggyBank className="h-4 w-4 text-emerald-500" />
           </div>
-          <div className="mt-2 text-2xl font-bold text-emerald-600 dark:text-emerald-400">
-            {formatCurrency(totalSavedActive)}
+          <div className="mt-2 tabular text-2xl font-bold text-emerald-600 dark:text-emerald-400">
+            {isLoading ? <Skeleton className="h-8 w-32" /> : formatCurrency(totalSavedActive)}
           </div>
           <p className="text-xs text-muted-foreground mt-1">
             {totalTargetActive > 0
@@ -138,25 +158,31 @@ export default function MetasPage() {
           </p>
         </div>
 
-        <div className="rounded-xl border bg-card p-4 shadow-sm">
+        <div className="rounded-2xl border bg-card p-5 shadow-xs">
           <div className="flex items-center justify-between text-muted-foreground">
-            <span className="text-xs font-medium">Lista de Desejos (Wishlist)</span>
+            <span className="text-xs font-semibold uppercase tracking-wider">
+              Lista de Desejos
+            </span>
             <Bookmark className="h-4 w-4 text-amber-500" />
           </div>
-          <div className="mt-2 text-2xl font-bold text-amber-600 dark:text-amber-400">
-            {formatCurrency(totalWishlist)}
+          <div className="mt-2 tabular text-2xl font-bold text-amber-600 dark:text-amber-400">
+            {isLoading ? <Skeleton className="h-8 w-32" /> : formatCurrency(totalWishlist)}
           </div>
           <p className="text-xs text-muted-foreground mt-1">
             {wishlistGoals.length} ite{wishlistGoals.length !== 1 ? 'ns' : 'm'} aguardando priorização
           </p>
         </div>
 
-        <div className="rounded-xl border bg-card p-4 shadow-sm">
+        <div className="rounded-2xl border bg-card p-5 shadow-xs">
           <div className="flex items-center justify-between text-muted-foreground">
-            <span className="text-xs font-medium">Objetivos Conquistados</span>
+            <span className="text-xs font-semibold uppercase tracking-wider">
+              Conquistados
+            </span>
             <CheckCircle2 className="h-4 w-4 text-blue-500" />
           </div>
-          <div className="mt-2 text-2xl font-bold">{completedCount}</div>
+          <div className="mt-2 tabular text-2xl font-bold">
+            {isLoading ? <Skeleton className="h-8 w-16" /> : completedCount}
+          </div>
           <p className="text-xs text-muted-foreground mt-1">
             Bens adquiridos e incorporados
           </p>
@@ -164,10 +190,11 @@ export default function MetasPage() {
       </div>
 
       {/* Tabs de Navegação */}
-      <div className="flex border-b border-border">
+      <div className="flex border-b border-border overflow-x-auto">
         <button
+          type="button"
           onClick={() => setActiveTab('active')}
-          className={`flex items-center gap-2 border-b-2 px-4 py-2.5 text-sm font-medium transition-colors ${
+          className={`flex items-center gap-2 border-b-2 px-4 py-2.5 text-sm font-medium whitespace-nowrap transition-colors cursor-pointer ${
             activeTab === 'active'
               ? 'border-primary text-primary'
               : 'border-transparent text-muted-foreground hover:text-foreground'
@@ -177,8 +204,9 @@ export default function MetasPage() {
           Metas Ativas ({activeGoals.length})
         </button>
         <button
+          type="button"
           onClick={() => setActiveTab('wishlist')}
-          className={`flex items-center gap-2 border-b-2 px-4 py-2.5 text-sm font-medium transition-colors ${
+          className={`flex items-center gap-2 border-b-2 px-4 py-2.5 text-sm font-medium whitespace-nowrap transition-colors cursor-pointer ${
             activeTab === 'wishlist'
               ? 'border-primary text-primary'
               : 'border-transparent text-muted-foreground hover:text-foreground'
@@ -188,8 +216,9 @@ export default function MetasPage() {
           Wishlist & Desejos ({wishlistGoals.length})
         </button>
         <button
+          type="button"
           onClick={() => setActiveTab('completed')}
-          className={`flex items-center gap-2 border-b-2 px-4 py-2.5 text-sm font-medium transition-colors ${
+          className={`flex items-center gap-2 border-b-2 px-4 py-2.5 text-sm font-medium whitespace-nowrap transition-colors cursor-pointer ${
             activeTab === 'completed'
               ? 'border-primary text-primary'
               : 'border-transparent text-muted-foreground hover:text-foreground'
@@ -202,33 +231,35 @@ export default function MetasPage() {
 
       {/* Lista de Metas / Wishlist */}
       {isLoading ? (
-        <div className="flex h-48 items-center justify-center text-sm text-muted-foreground">
-          Carregando objetivos e metas...
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <Skeleton key={i} className="h-56 w-full rounded-2xl" />
+          ))}
         </div>
       ) : activeTab === 'active' && activeGoals.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-xl border border-dashed p-10 text-center">
+        <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed p-10 text-center">
           <Target className="h-10 w-10 text-muted-foreground/60 mb-2" />
           <h3 className="font-semibold text-lg">Nenhuma meta ativa no momento</h3>
           <p className="text-sm text-muted-foreground max-w-sm mt-1">
             Crie objetivos de médio e longo prazo (viagens, fundos de reserva ou bens) e acompanhe seu progresso de poupança.
           </p>
-          <Button onClick={() => openNewGoal('in_progress')} className="mt-4 gap-2">
+          <Button onClick={() => openNewGoal('in_progress')} size="sm" className="mt-4 gap-2 text-xs">
             <Plus className="h-4 w-4" /> Criar Primeira Meta
           </Button>
         </div>
       ) : activeTab === 'wishlist' && wishlistGoals.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-xl border border-dashed p-10 text-center">
+        <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed p-10 text-center">
           <ShoppingBag className="h-10 w-10 text-muted-foreground/60 mb-2" />
           <h3 className="font-semibold text-lg">Sua Wishlist está vazia</h3>
           <p className="text-sm text-muted-foreground max-w-sm mt-1">
             Cadastre os itens que você quer comprar no futuro para evitar compras por impulso e planejar o melhor momento de compra.
           </p>
-          <Button onClick={() => openNewGoal('planned')} className="mt-4 gap-2">
+          <Button onClick={() => openNewGoal('planned')} size="sm" className="mt-4 gap-2 text-xs">
             <Plus className="h-4 w-4" /> Adicionar Desejo à Wishlist
           </Button>
         </div>
       ) : activeTab === 'completed' && completedGoals.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-xl border border-dashed p-10 text-center">
+        <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed p-10 text-center">
           <CheckCircle2 className="h-10 w-10 text-muted-foreground/60 mb-2" />
           <h3 className="font-semibold text-lg">Nenhuma meta concluída ainda</h3>
           <p className="text-sm text-muted-foreground max-w-sm mt-1">
@@ -245,7 +276,7 @@ export default function MetasPage() {
           ).map((goal) => (
             <div
               key={goal.id}
-              className="flex flex-col justify-between rounded-xl border bg-card p-5 shadow-sm hover:border-primary/40 transition-all"
+              className="flex flex-col justify-between rounded-2xl border bg-card p-5 shadow-xs hover:border-primary/40 transition-all"
             >
               <div>
                 <div className="flex items-start justify-between gap-2">
@@ -262,7 +293,7 @@ export default function MetasPage() {
                   {getPriorityBadge(goal.priority)}
                 </div>
 
-                {goal.image_url && (
+                {goal.image_url && /^https?:\/\//i.test(goal.image_url) && (
                   <div className="mt-3 overflow-hidden rounded-lg border bg-muted/20 h-32 flex items-center justify-center">
                     <img
                       src={goal.image_url}
@@ -274,7 +305,7 @@ export default function MetasPage() {
                 )}
 
                 {/* Bloco de Valores */}
-                <div className="mt-4 space-y-2">
+                <div className="mt-4 space-y-2 tabular">
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Valor Alvo:</span>
                     <span className="font-bold">{formatCurrency(goal.target_amount)}</span>
@@ -310,7 +341,9 @@ export default function MetasPage() {
                   {goal.target_date && (
                     <div className="flex items-center gap-1.5 text-xs text-muted-foreground pt-1">
                       <Calendar className="h-3.5 w-3.5" />
-                      <span>Data Prevista: {new Date(goal.target_date).toLocaleDateString('pt-BR')}</span>
+                      <span>
+                        Data Prevista: {new Date(goal.target_date).toLocaleDateString('pt-BR')}
+                      </span>
                     </div>
                   )}
 
@@ -331,74 +364,102 @@ export default function MetasPage() {
 
               {/* Botões de Ação */}
               <div className="mt-5 pt-3 border-t flex items-center justify-between gap-2">
-                <div className="flex items-center gap-1">
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="h-8 w-8 p-0"
-                    onClick={() => handleEdit(goal)}
-                    title="Editar"
-                  >
-                    <Edit2 className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="h-8 w-8 p-0 text-destructive hover:text-destructive"
-                    onClick={() => handleDelete(goal)}
-                    title="Excluir"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  {goal.status === 'planned' && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="text-xs gap-1"
-                      onClick={() => handleEdit({ ...goal, status: 'in_progress' })}
-                    >
-                      <Target className="h-3.5 w-3.5" />
-                      Ativar Meta
-                    </Button>
-                  )}
-
-                  {goal.status === 'in_progress' && (
-                    <>
+                {confirmDeleteId === goal.id ? (
+                  <div className="flex items-center gap-1.5 w-full justify-between">
+                    <span className="text-xs text-destructive font-medium">
+                      Excluir esta meta?
+                    </span>
+                    <div className="flex gap-1.5">
                       <Button
                         size="sm"
                         variant="outline"
-                        className="text-xs gap-1"
-                        onClick={() => setContributeGoal(goal)}
+                        className="h-7 px-2 text-xs"
+                        onClick={() => setConfirmDeleteId(null)}
                       >
-                        <PiggyBank className="h-3.5 w-3.5 text-emerald-500" />
-                        Aportar
+                        Cancelar
                       </Button>
                       <Button
                         size="sm"
-                        className="text-xs gap-1"
-                        onClick={() => setConvertGoal(goal)}
+                        variant="destructive"
+                        className="h-7 px-2 text-xs"
+                        onClick={() => handleConfirmDelete(goal.id)}
                       >
-                        <Sparkles className="h-3.5 w-3.5" />
-                        Comprar & Ativar
+                        Confirmar
                       </Button>
-                    </>
-                  )}
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-8 w-8 p-0"
+                        onClick={() => handleEdit(goal)}
+                        title="Editar"
+                      >
+                        <Edit2 className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                        onClick={() => setConfirmDeleteId(goal.id)}
+                        title="Excluir"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
 
-                  {goal.status === 'completed' && !goal.converted_to_asset && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="text-xs gap-1"
-                      onClick={() => setConvertGoal(goal)}
-                    >
-                      <Layers className="h-3.5 w-3.5" />
-                      Incorporar ao Patrimônio
-                    </Button>
-                  )}
-                </div>
+                    <div className="flex items-center gap-2">
+                      {goal.status === 'planned' && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="text-xs gap-1"
+                          onClick={() => handleEdit({ ...goal, status: 'in_progress' })}
+                        >
+                          <Target className="h-3.5 w-3.5" />
+                          Ativar Meta
+                        </Button>
+                      )}
+
+                      {goal.status === 'in_progress' && (
+                        <>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-xs gap-1"
+                            onClick={() => setContributeGoal(goal)}
+                          >
+                            <PiggyBank className="h-3.5 w-3.5 text-emerald-500" />
+                            Aportar
+                          </Button>
+                          <Button
+                            size="sm"
+                            className="text-xs gap-1"
+                            onClick={() => setConvertGoal(goal)}
+                          >
+                            <Sparkles className="h-3.5 w-3.5" />
+                            Comprar & Ativar
+                          </Button>
+                        </>
+                      )}
+
+                      {goal.status === 'completed' && !goal.converted_to_asset && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="text-xs gap-1"
+                          onClick={() => setConvertGoal(goal)}
+                        >
+                          <Layers className="h-3.5 w-3.5" />
+                          Incorporar ao Patrimônio
+                        </Button>
+                      )}
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           ))}
@@ -420,6 +481,7 @@ export default function MetasPage() {
       />
 
       <GoalConvertDialog
+        key={convertGoal?.id || 'convert'}
         open={!!convertGoal}
         onOpenChange={(open) => !open && setConvertGoal(null)}
         goal={convertGoal}

@@ -4,6 +4,7 @@ import { formatCurrency, formatBRL } from '@/lib/money'
 import { AssetDialog } from '@/components/asset-dialog'
 import { LiabilityDialog } from '@/components/liability-dialog'
 import { Button } from '@/components/ui/button'
+import { Skeleton } from '@/components/ui/skeleton'
 import type { Asset, Liability } from '@/types/database'
 import { useAssets } from '@/hooks/use-assets'
 import { useLiabilities } from '@/hooks/use-liabilities'
@@ -38,8 +39,11 @@ const LIABILITY_COLORS = ['#ef4444', '#f97316', '#e11d48']
 
 export default function PatrimonioPage() {
   const { summary, properties, isLoading } = usePatrimony()
-  const { deleteAsset } = useAssets()
-  const { deleteLiability } = useLiabilities()
+  const { assets, deleteAsset } = useAssets()
+  const { liabilities, deleteLiability } = useLiabilities()
+
+  const [confirmDeleteAssetId, setConfirmDeleteAssetId] = useState<string | null>(null)
+  const [confirmDeleteLiabId, setConfirmDeleteLiabId] = useState<string | null>(null)
 
   // Modais
   const [assetDialogOpen, setAssetDialogOpen] = useState(false)
@@ -48,9 +52,6 @@ export default function PatrimonioPage() {
   const [editingLiab, setEditingLiab] = useState<Liability | null>(null)
 
   const [activeTab, setActiveTab] = useState<'assets' | 'liabilities' | 'properties'>('assets')
-
-  const { assets } = useAssets()
-  const { liabilities } = useLiabilities()
 
   const assetsPieData = useMemo(() => {
     return [
@@ -63,9 +64,21 @@ export default function PatrimonioPage() {
 
   const liabilitiesPieData = useMemo(() => {
     return [
-      { name: 'Financ. Imobiliário', value: summary.liabilitiesBreakdown.mortgages, color: '#ef4444' },
-      { name: 'Empréstimos / Dívidas', value: summary.liabilitiesBreakdown.loansAndDebts, color: '#f97316' },
-      { name: 'Faturas de Cartão', value: summary.liabilitiesBreakdown.creditCard, color: '#e11d48' },
+      {
+        name: 'Financ. Imobiliário',
+        value: summary.liabilitiesBreakdown.mortgages,
+        color: '#ef4444',
+      },
+      {
+        name: 'Empréstimos / Dívidas',
+        value: summary.liabilitiesBreakdown.loansAndDebts,
+        color: '#f97316',
+      },
+      {
+        name: 'Faturas de Cartão',
+        value: summary.liabilitiesBreakdown.creditCard,
+        color: '#e11d48',
+      },
     ].filter((item) => item.value > 0)
   }, [summary.liabilitiesBreakdown])
 
@@ -79,10 +92,9 @@ export default function PatrimonioPage() {
     setAssetDialogOpen(true)
   }
 
-  async function handleDeleteAsset(a: Asset) {
-    if (confirm(`Tem certeza que deseja excluir o bem "${a.name}"?`)) {
-      await deleteAsset(a.id)
-    }
+  async function handleConfirmDeleteAsset(id: string) {
+    await deleteAsset(id)
+    setConfirmDeleteAssetId(null)
   }
 
   function handleOpenNewLiab() {
@@ -95,10 +107,9 @@ export default function PatrimonioPage() {
     setLiabDialogOpen(true)
   }
 
-  async function handleDeleteLiab(l: Liability) {
-    if (confirm(`Tem certeza que deseja excluir a obrigação "${l.name}"?`)) {
-      await deleteLiability(l.id)
-    }
+  async function handleConfirmDeleteLiab(id: string) {
+    await deleteLiability(id)
+    setConfirmDeleteLiabId(null)
   }
 
   function getAssetIcon(type: string) {
@@ -115,21 +126,23 @@ export default function PatrimonioPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8 animate-in fade-in-50 duration-200">
       {/* Top Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between pb-2 border-b">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Balanço Patrimonial</h1>
-          <p className="text-sm text-muted-foreground">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
+            Balanço Patrimonial
+          </h1>
+          <p className="text-sm text-muted-foreground mt-0.5">
             Visão consolidada do seu patrimônio real: Ativos Totais menos Passivos e Obrigações (Regra 1 do README).
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={handleOpenNewLiab} className="gap-2">
+          <Button variant="outline" size="sm" onClick={handleOpenNewLiab} className="gap-1.5 text-xs">
             <Plus className="h-4 w-4" />
             + Obrigação / Passivo
           </Button>
-          <Button onClick={handleOpenNewAsset} className="gap-2">
+          <Button size="sm" onClick={handleOpenNewAsset} className="gap-1.5 text-xs">
             <Plus className="h-4 w-4" />
             + Bem Patrimonial
           </Button>
@@ -138,7 +151,7 @@ export default function PatrimonioPage() {
 
       {/* KPIs do Patrimônio Líquido */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="rounded-xl border bg-card p-4 shadow-sm border-primary/30">
+        <div className="rounded-2xl border bg-card p-5 shadow-xs border-primary/30">
           <div className="flex items-center justify-between text-muted-foreground">
             <span className="text-xs font-semibold text-primary uppercase tracking-wider">
               Patrimônio Líquido
@@ -146,56 +159,68 @@ export default function PatrimonioPage() {
             <Scale className="h-4 w-4 text-primary" />
           </div>
           <div
-            className={`mt-2 text-2xl font-black ${
+            className={`mt-2 tabular text-2xl font-black ${
               summary.netWorth >= 0 ? 'text-primary' : 'text-destructive'
             }`}
           >
-            {formatCurrency(summary.netWorth)}
+            {isLoading ? <Skeleton className="h-8 w-32" /> : formatCurrency(summary.netWorth)}
           </div>
-          <p className="text-xs text-muted-foreground mt-1">Ativos Brutos &minus; Passivos Totais</p>
+          <p className="text-xs text-muted-foreground mt-1">
+            Ativos Brutos &minus; Passivos Totais
+          </p>
         </div>
 
-        <div className="rounded-xl border bg-card p-4 shadow-sm">
+        <div className="rounded-2xl border bg-card p-5 shadow-xs">
           <div className="flex items-center justify-between text-muted-foreground">
-            <span className="text-xs font-medium">Ativos Brutos</span>
+            <span className="text-xs font-semibold uppercase tracking-wider">
+              Ativos Brutos
+            </span>
             <ShieldCheck className="h-4 w-4 text-emerald-500" />
           </div>
-          <div className="mt-2 text-2xl font-bold text-emerald-600 dark:text-emerald-400">
-            {formatCurrency(summary.totalAssets)}
+          <div className="mt-2 tabular text-2xl font-bold text-emerald-600 dark:text-emerald-400">
+            {isLoading ? <Skeleton className="h-8 w-32" /> : formatCurrency(summary.totalAssets)}
           </div>
           <p className="text-xs text-muted-foreground mt-1">
             Caixa + Investimentos + Bens + Imóveis
           </p>
         </div>
 
-        <div className="rounded-xl border bg-card p-4 shadow-sm">
+        <div className="rounded-2xl border bg-card p-5 shadow-xs">
           <div className="flex items-center justify-between text-muted-foreground">
-            <span className="text-xs font-medium">Passivos e Dívidas</span>
+            <span className="text-xs font-semibold uppercase tracking-wider">
+              Passivos e Dívidas
+            </span>
             <TrendingDown className="h-4 w-4 text-destructive" />
           </div>
-          <div className="mt-2 text-2xl font-bold text-destructive">
-            {formatCurrency(summary.totalLiabilities)}
+          <div className="mt-2 tabular text-2xl font-bold text-destructive">
+            {isLoading ? (
+              <Skeleton className="h-8 w-32" />
+            ) : (
+              formatCurrency(summary.totalLiabilities)
+            )}
           </div>
           <p className="text-xs text-muted-foreground mt-1">
             Financiamentos + Empréstimos + Cartões
           </p>
         </div>
 
-        <div className="rounded-xl border bg-card p-4 shadow-sm">
+        <div className="rounded-2xl border bg-card p-5 shadow-xs">
           <div className="flex items-center justify-between text-muted-foreground">
-            <span className="text-xs font-medium">Índice de Endividamento</span>
+            <span className="text-xs font-semibold uppercase tracking-wider">
+              Endividamento
+            </span>
             <Coins className="h-4 w-4 text-amber-500" />
           </div>
           <div
-            className={`mt-2 text-2xl font-bold ${
+            className={`mt-2 tabular text-2xl font-bold ${
               summary.debtRatio > 50
                 ? 'text-destructive'
                 : summary.debtRatio > 30
-                ? 'text-amber-600'
-                : 'text-emerald-600'
+                ? 'text-amber-600 dark:text-amber-400'
+                : 'text-emerald-600 dark:text-emerald-400'
             }`}
           >
-            {summary.debtRatio}%
+            {isLoading ? <Skeleton className="h-8 w-20" /> : `${summary.debtRatio}%`}
           </div>
           <p className="text-xs text-muted-foreground mt-1">
             {summary.debtRatio <= 30
@@ -208,10 +233,12 @@ export default function PatrimonioPage() {
       {/* Gráficos de Composição do Balanço */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Ativos */}
-        <div className="rounded-xl border bg-card p-5 shadow-sm">
+        <div className="rounded-2xl border bg-card p-5 shadow-xs">
           <div className="flex items-center gap-2 mb-2">
             <PieIcon className="h-4 w-4 text-emerald-500" />
-            <h2 className="font-semibold text-sm">Composição dos Ativos ({formatCurrency(summary.totalAssets)})</h2>
+            <h2 className="font-semibold text-sm tabular">
+              Composição dos Ativos ({formatCurrency(summary.totalAssets)})
+            </h2>
           </div>
           {assetsPieData.length > 0 ? (
             <div className="h-56">
@@ -248,10 +275,10 @@ export default function PatrimonioPage() {
         </div>
 
         {/* Passivos */}
-        <div className="rounded-xl border bg-card p-5 shadow-sm">
+        <div className="rounded-2xl border bg-card p-5 shadow-xs">
           <div className="flex items-center gap-2 mb-2">
             <PieIcon className="h-4 w-4 text-destructive" />
-            <h2 className="font-semibold text-sm">
+            <h2 className="font-semibold text-sm tabular">
               Composição dos Passivos ({formatCurrency(summary.totalLiabilities)})
             </h2>
           </div>
@@ -283,7 +310,7 @@ export default function PatrimonioPage() {
               </ResponsiveContainer>
             </div>
           ) : (
-            <div className="h-56 flex items-center justify-center text-xs text-emerald-600 font-medium">
+            <div className="h-56 flex items-center justify-center text-xs text-emerald-600 dark:text-emerald-400 font-medium">
               Parabéns! Você não possui passivos ou dívidas pendentes.
             </div>
           )}
@@ -291,10 +318,11 @@ export default function PatrimonioPage() {
       </div>
 
       {/* Tabs de Detalhamento */}
-      <div className="flex border-b border-border">
+      <div className="flex border-b border-border overflow-x-auto">
         <button
+          type="button"
           onClick={() => setActiveTab('assets')}
-          className={`flex items-center gap-2 border-b-2 px-4 py-2.5 text-sm font-medium transition-colors ${
+          className={`flex items-center gap-2 border-b-2 px-4 py-2.5 text-sm font-medium whitespace-nowrap transition-colors cursor-pointer ${
             activeTab === 'assets'
               ? 'border-primary text-primary'
               : 'border-transparent text-muted-foreground hover:text-foreground'
@@ -304,8 +332,9 @@ export default function PatrimonioPage() {
           Bens e Ativos Físicos ({assets.length})
         </button>
         <button
+          type="button"
           onClick={() => setActiveTab('liabilities')}
-          className={`flex items-center gap-2 border-b-2 px-4 py-2.5 text-sm font-medium transition-colors ${
+          className={`flex items-center gap-2 border-b-2 px-4 py-2.5 text-sm font-medium whitespace-nowrap transition-colors cursor-pointer ${
             activeTab === 'liabilities'
               ? 'border-primary text-primary'
               : 'border-transparent text-muted-foreground hover:text-foreground'
@@ -315,8 +344,9 @@ export default function PatrimonioPage() {
           Passivos & Dívidas ({liabilities.length})
         </button>
         <button
+          type="button"
           onClick={() => setActiveTab('properties')}
-          className={`flex items-center gap-2 border-b-2 px-4 py-2.5 text-sm font-medium transition-colors ${
+          className={`flex items-center gap-2 border-b-2 px-4 py-2.5 text-sm font-medium whitespace-nowrap transition-colors cursor-pointer ${
             activeTab === 'properties'
               ? 'border-primary text-primary'
               : 'border-transparent text-muted-foreground hover:text-foreground'
@@ -329,11 +359,13 @@ export default function PatrimonioPage() {
 
       {/* Conteúdo das Tabs */}
       {isLoading ? (
-        <div className="p-8 text-center text-sm text-muted-foreground">
-          Carregando informações patrimoniais...
+        <div className="space-y-3">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <Skeleton key={i} className="h-14 w-full rounded-2xl" />
+          ))}
         </div>
       ) : activeTab === 'assets' ? (
-        <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
+        <div className="rounded-2xl border bg-card shadow-xs overflow-hidden">
           <div className="p-4 border-b flex items-center justify-between">
             <div>
               <h3 className="font-semibold text-sm">Bens Físicos e Patrimoniais</h3>
@@ -356,10 +388,12 @@ export default function PatrimonioPage() {
                 <thead className="bg-muted/50 text-muted-foreground text-xs font-medium text-left border-b">
                   <tr>
                     <th className="py-3 px-4">Nome do Bem</th>
-                    <th className="py-3 px-4">Classificação</th>
-                    <th className="py-3 px-4 text-right">Valor de Aquisição</th>
+                    <th className="py-3 px-4 hidden md:table-cell">Classificação</th>
+                    <th className="py-3 px-4 text-right hidden sm:table-cell">
+                      Valor de Aquisição
+                    </th>
                     <th className="py-3 px-4 text-right">Valor Atual Estimado</th>
-                    <th className="py-3 px-4">Data Aquisição</th>
+                    <th className="py-3 px-4 hidden lg:table-cell">Data Aquisição</th>
                     <th className="py-3 px-4 text-right">Ações</th>
                   </tr>
                 </thead>
@@ -381,37 +415,58 @@ export default function PatrimonioPage() {
                           </div>
                         </div>
                       </td>
-                      <td className="py-3 px-4 text-muted-foreground text-xs capitalize">
+                      <td className="py-3 px-4 text-muted-foreground text-xs capitalize hidden md:table-cell">
                         {a.type}
                       </td>
-                      <td className="py-3 px-4 text-right text-muted-foreground">
+                      <td className="py-3 px-4 text-right text-muted-foreground tabular hidden sm:table-cell">
                         {formatCurrency(a.acquisition_value)}
                       </td>
-                      <td className="py-3 px-4 text-right font-bold text-foreground">
+                      <td className="py-3 px-4 text-right font-bold text-foreground tabular">
                         {formatCurrency(a.current_value)}
                       </td>
-                      <td className="py-3 px-4 text-muted-foreground text-xs">
+                      <td className="py-3 px-4 text-muted-foreground text-xs tabular hidden lg:table-cell">
                         {new Date(a.acquisition_date).toLocaleDateString('pt-BR')}
                       </td>
                       <td className="py-3 px-4 text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="h-8 w-8 p-0"
-                            onClick={() => handleEditAsset(a)}
-                          >
-                            <Edit2 className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="h-8 w-8 p-0 text-destructive hover:text-destructive"
-                            onClick={() => handleDeleteAsset(a)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
+                        {confirmDeleteAssetId === a.id ? (
+                          <div className="flex items-center justify-end gap-1">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-7 px-2 text-xs"
+                              onClick={() => setConfirmDeleteAssetId(null)}
+                            >
+                              Não
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              className="h-7 px-2 text-xs"
+                              onClick={() => handleConfirmDeleteAsset(a.id)}
+                            >
+                              Excluir
+                            </Button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center justify-end gap-1">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-8 w-8 p-0"
+                              onClick={() => handleEditAsset(a)}
+                            >
+                              <Edit2 className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                              onClick={() => setConfirmDeleteAssetId(a.id)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        )}
                       </td>
                     </tr>
                   ))}
@@ -421,7 +476,7 @@ export default function PatrimonioPage() {
           )}
         </div>
       ) : activeTab === 'liabilities' ? (
-        <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
+        <div className="rounded-2xl border bg-card shadow-xs overflow-hidden">
           <div className="p-4 border-b flex items-center justify-between">
             <div>
               <h3 className="font-semibold text-sm">Passivos e Obrigações Financeiras</h3>
@@ -435,7 +490,7 @@ export default function PatrimonioPage() {
           </div>
 
           {liabilities.length === 0 ? (
-            <div className="p-8 text-center text-sm text-emerald-600 font-medium">
+            <div className="p-8 text-center text-sm text-emerald-600 dark:text-emerald-400 font-medium">
               Nenhuma dívida ou obrigação cadastrada.
             </div>
           ) : (
@@ -444,10 +499,12 @@ export default function PatrimonioPage() {
                 <thead className="bg-muted/50 text-muted-foreground text-xs font-medium text-left border-b">
                   <tr>
                     <th className="py-3 px-4">Descrição</th>
-                    <th className="py-3 px-4">Tipo</th>
-                    <th className="py-3 px-4 text-right">Total Contratado</th>
+                    <th className="py-3 px-4 hidden md:table-cell">Tipo</th>
+                    <th className="py-3 px-4 text-right hidden sm:table-cell">
+                      Total Contratado
+                    </th>
                     <th className="py-3 px-4 text-right">Saldo Devedor Restante</th>
-                    <th className="py-3 px-4 text-right">Parcela Mensal</th>
+                    <th className="py-3 px-4 text-right hidden lg:table-cell">Parcela Mensal</th>
                     <th className="py-3 px-4 text-right">Ações</th>
                   </tr>
                 </thead>
@@ -455,37 +512,58 @@ export default function PatrimonioPage() {
                   {liabilities.map((l) => (
                     <tr key={l.id} className="hover:bg-muted/30 transition-colors">
                       <td className="py-3 px-4 font-semibold">{l.name}</td>
-                      <td className="py-3 px-4 text-muted-foreground text-xs capitalize">
+                      <td className="py-3 px-4 text-muted-foreground text-xs capitalize hidden md:table-cell">
                         {l.type}
                       </td>
-                      <td className="py-3 px-4 text-right text-muted-foreground">
+                      <td className="py-3 px-4 text-right text-muted-foreground tabular hidden sm:table-cell">
                         {formatCurrency(l.total_amount)}
                       </td>
-                      <td className="py-3 px-4 text-right font-bold text-destructive">
+                      <td className="py-3 px-4 text-right font-bold text-destructive tabular">
                         {formatCurrency(l.current_balance)}
                       </td>
-                      <td className="py-3 px-4 text-right text-xs">
+                      <td className="py-3 px-4 text-right text-xs tabular hidden lg:table-cell">
                         {l.monthly_payment ? formatCurrency(l.monthly_payment) : '—'}
                       </td>
                       <td className="py-3 px-4 text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="h-8 w-8 p-0"
-                            onClick={() => handleEditLiab(l)}
-                          >
-                            <Edit2 className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="h-8 w-8 p-0 text-destructive hover:text-destructive"
-                            onClick={() => handleDeleteLiab(l)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
+                        {confirmDeleteLiabId === l.id ? (
+                          <div className="flex items-center justify-end gap-1">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-7 px-2 text-xs"
+                              onClick={() => setConfirmDeleteLiabId(null)}
+                            >
+                              Não
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              className="h-7 px-2 text-xs"
+                              onClick={() => handleConfirmDeleteLiab(l.id)}
+                            >
+                              Excluir
+                            </Button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center justify-end gap-1">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-8 w-8 p-0"
+                              onClick={() => handleEditLiab(l)}
+                            >
+                              <Edit2 className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                              onClick={() => setConfirmDeleteLiabId(l.id)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        )}
                       </td>
                     </tr>
                   ))}
@@ -495,7 +573,7 @@ export default function PatrimonioPage() {
           )}
         </div>
       ) : (
-        <div className="rounded-xl border bg-card p-6 shadow-sm space-y-4">
+        <div className="rounded-2xl border bg-card p-6 shadow-xs space-y-4">
           <div className="flex items-center justify-between">
             <div>
               <h3 className="font-semibold text-base">Patrimônio Imobiliário Integrado</h3>
@@ -512,12 +590,12 @@ export default function PatrimonioPage() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
             {properties.map((p) => (
-              <div key={p.id} className="p-4 rounded-xl border bg-muted/20 space-y-2">
+              <div key={p.id} className="p-4 rounded-xl border bg-muted/20 space-y-2 tabular">
                 <div className="flex justify-between items-start">
                   <div>
                     <h4 className="font-semibold text-sm">{p.name}</h4>
                     <span className="text-xs text-muted-foreground">
-                      {p.builder || 'Construtora'} • {p.unit || 'Unidade'}
+                      {p.builder || 'Construtora'} &bull; {p.unit || 'Unidade'}
                     </span>
                   </div>
                   <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium">

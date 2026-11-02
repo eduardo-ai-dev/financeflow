@@ -6,14 +6,17 @@ import {
   deleteProject as deleteProjectService,
   type ProjectWithStats,
 } from '@/services/projects'
+import { useAuth } from '@/hooks/use-auth'
 import type { ProjectFormData } from '@/lib/validations/project'
 
 export function useProjects() {
+  const { user } = useAuth()
   const queryClient = useQueryClient()
 
   const { data: projects = [], isLoading, error } = useQuery({
-    queryKey: ['projects'],
+    queryKey: ['projects', user?.id],
     queryFn: fetchProjects,
+    enabled: !!user?.id,
   })
 
   function invalidateAll() {
@@ -57,4 +60,3 @@ export function useProjects() {
 }
 
 export type { ProjectWithStats }
-

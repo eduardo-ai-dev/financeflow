@@ -113,3 +113,4 @@ describe('Política de senha — schemas de autenticação', () => {
     expect(loginSchema.safeParse({ email: 'ana@email.com', password: 'antiga1' }).success).toBe(true)
   })
 })
+

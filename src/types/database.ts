@@ -228,6 +228,8 @@ export type TransactionKind =
 
 export type TransactionStatus = 'pending' | 'completed' | 'canceled'
 
+export type ExpenseClassification = 'fixed' | 'variable' | 'occasional' | 'extraordinary'
+
 export interface Transaction {
   id: string
   user_id: string
@@ -238,6 +240,7 @@ export interface Transaction {
   account_id: string | null
   to_account_id: string | null
   category_id: string | null
+  expense_classification?: ExpenseClassification | null
   card_id?: string | null
   invoice_id?: string | null
   installment_id?: string | null

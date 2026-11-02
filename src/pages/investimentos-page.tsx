@@ -4,6 +4,7 @@ import { formatCurrency, formatBRL } from '@/lib/money'
 import { InvestmentDialog } from '@/components/investment-dialog'
 import { InvestmentTransactionDialog } from '@/components/investment-transaction-dialog'
 import { Button } from '@/components/ui/button'
+import { Skeleton } from '@/components/ui/skeleton'
 import {
   TrendingUp,
   Plus,
@@ -49,6 +50,7 @@ const TYPE_LABELS: Record<string, string> = {
 
 export default function InvestimentosPage() {
   const { investments, transactions, isLoading, deleteInvestment } = useInvestments()
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
 
   // Modais
   const [invDialogOpen, setInvDialogOpen] = useState(false)
@@ -116,23 +118,24 @@ export default function InvestimentosPage() {
     setTxDialogOpen(true)
   }
 
-  async function handleDelete(inv: InvestmentWithStats) {
-    if (confirm(`Tem certeza que deseja remover o investimento "${inv.name}"?`)) {
-      await deleteInvestment(inv.id)
-    }
+  async function handleConfirmDelete(id: string) {
+    await deleteInvestment(id)
+    setConfirmDeleteId(null)
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8 animate-in fade-in-50 duration-200">
       {/* Top Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between pb-2 border-b">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Investimentos & Carteira</h1>
-          <p className="text-sm text-muted-foreground">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
+            Investimentos & Carteira
+          </h1>
+          <p className="text-sm text-muted-foreground mt-0.5">
             Acompanhe a rentabilidade real e evolução patrimonial. Aportes são tratados como transferências patrimoniais sem inflar despesas de consumo.
           </p>
         </div>
-        <Button onClick={handleOpenNew} className="gap-2">
+        <Button onClick={handleOpenNew} size="sm" className="gap-1.5 text-xs">
           <Plus className="h-4 w-4" />
           Novo Investimento
         </Button>
@@ -140,43 +143,59 @@ export default function InvestimentosPage() {
 
       {/* KPIs da Carteira */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="rounded-xl border bg-card p-4 shadow-sm">
+        <div className="rounded-2xl border bg-card p-5 shadow-xs">
           <div className="flex items-center justify-between text-muted-foreground">
-            <span className="text-xs font-medium">Patrimônio Investido</span>
+            <span className="text-xs font-semibold uppercase tracking-wider">
+              Patrimônio Investido
+            </span>
             <TrendingUp className="h-4 w-4 text-primary" />
           </div>
-          <div className="mt-2 text-2xl font-bold">{formatCurrency(totalCurrent)}</div>
+          <div className="mt-2 tabular text-2xl font-bold">
+            {isLoading ? <Skeleton className="h-8 w-32" /> : formatCurrency(totalCurrent)}
+          </div>
           <p className="text-xs text-muted-foreground mt-1">
             {investments.length} ativo{investments.length !== 1 ? 's' : ''} na carteira
           </p>
         </div>
 
-        <div className="rounded-xl border bg-card p-4 shadow-sm">
+        <div className="rounded-2xl border bg-card p-5 shadow-xs">
           <div className="flex items-center justify-between text-muted-foreground">
-            <span className="text-xs font-medium">Custo Total Aportado</span>
+            <span className="text-xs font-semibold uppercase tracking-wider">
+              Custo Total Aportado
+            </span>
             <Building className="h-4 w-4 text-muted-foreground" />
           </div>
-          <div className="mt-2 text-2xl font-bold">{formatCurrency(totalCost)}</div>
+          <div className="mt-2 tabular text-2xl font-bold">
+            {isLoading ? <Skeleton className="h-8 w-32" /> : formatCurrency(totalCost)}
+          </div>
           <p className="text-xs text-muted-foreground mt-1">Capital aportado acumulado</p>
         </div>
 
-        <div className="rounded-xl border bg-card p-4 shadow-sm">
+        <div className="rounded-2xl border bg-card p-5 shadow-xs">
           <div className="flex items-center justify-between text-muted-foreground">
-            <span className="text-xs font-medium">Rentabilidade Histórica</span>
+            <span className="text-xs font-semibold uppercase tracking-wider">
+              Rentabilidade Histórica
+            </span>
             <ShieldCheck className="h-4 w-4 text-emerald-500" />
           </div>
           <div
-            className={`mt-2 text-2xl font-bold ${
+            className={`mt-2 tabular text-2xl font-bold ${
               totalProfit >= 0
                 ? 'text-emerald-600 dark:text-emerald-400'
                 : 'text-destructive'
             }`}
           >
-            {totalProfit >= 0 ? '+' : ''}
-            {formatCurrency(totalProfit)}
+            {isLoading ? (
+              <Skeleton className="h-8 w-32" />
+            ) : (
+              <>
+                {totalProfit >= 0 ? '+' : ''}
+                {formatCurrency(totalProfit)}
+              </>
+            )}
           </div>
           <p
-            className={`text-xs mt-1 ${
+            className={`text-xs mt-1 tabular ${
               totalProfitPercent >= 0
                 ? 'text-emerald-600 dark:text-emerald-400'
                 : 'text-destructive'
@@ -187,13 +206,15 @@ export default function InvestimentosPage() {
           </p>
         </div>
 
-        <div className="rounded-xl border bg-card p-4 shadow-sm">
+        <div className="rounded-2xl border bg-card p-5 shadow-xs">
           <div className="flex items-center justify-between text-muted-foreground">
-            <span className="text-xs font-medium">Proventos Recebidos</span>
+            <span className="text-xs font-semibold uppercase tracking-wider">
+              Proventos Recebidos
+            </span>
             <Coins className="h-4 w-4 text-amber-500" />
           </div>
-          <div className="mt-2 text-2xl font-bold text-amber-600 dark:text-amber-400">
-            {formatCurrency(totalDividends)}
+          <div className="mt-2 tabular text-2xl font-bold text-amber-600 dark:text-amber-400">
+            {isLoading ? <Skeleton className="h-8 w-32" /> : formatCurrency(totalDividends)}
           </div>
           <p className="text-xs text-muted-foreground mt-1">Dividendos e Juros s/ Capital</p>
         </div>
@@ -202,7 +223,7 @@ export default function InvestimentosPage() {
       {/* Gráfico de Alocação e Resumo */}
       {allocationData.length > 0 && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="rounded-xl border bg-card p-5 shadow-sm lg:col-span-1">
+          <div className="rounded-2xl border bg-card p-5 shadow-xs lg:col-span-1">
             <div className="flex items-center gap-2 mb-2">
               <PieIcon className="h-4 w-4 text-primary" />
               <h2 className="font-semibold text-sm">Alocação por Classe</h2>
@@ -232,12 +253,12 @@ export default function InvestimentosPage() {
             </div>
           </div>
 
-          <div className="rounded-xl border bg-card p-5 shadow-sm lg:col-span-2 flex flex-col justify-between">
+          <div className="rounded-2xl border bg-card p-5 shadow-xs lg:col-span-2 flex flex-col justify-between">
             <div>
               <h2 className="font-semibold text-sm mb-2">Diversificação da Carteira</h2>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4">
                 {allocationData.map((item) => (
-                  <div key={item.name} className="p-3 rounded-lg border bg-muted/20">
+                  <div key={item.name} className="p-3 rounded-xl border bg-muted/20">
                     <div className="flex items-center gap-1.5">
                       <div
                         className="h-2.5 w-2.5 rounded-full"
@@ -247,8 +268,12 @@ export default function InvestimentosPage() {
                         {item.name}
                       </span>
                     </div>
-                    <div className="mt-1 font-bold text-sm">{formatCurrency(item.value)}</div>
-                    <span className="text-xs text-muted-foreground">{item.percent}%</span>
+                    <div className="mt-1 tabular font-bold text-sm">
+                      {formatCurrency(item.value)}
+                    </div>
+                    <span className="text-xs text-muted-foreground tabular">
+                      {item.percent}%
+                    </span>
                   </div>
                 ))}
               </div>
@@ -264,7 +289,7 @@ export default function InvestimentosPage() {
       )}
 
       {/* Lista de Investimentos */}
-      <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
+      <div className="rounded-2xl border bg-card shadow-xs overflow-hidden">
         <div className="p-5 border-b flex items-center justify-between">
           <div>
             <h2 className="font-semibold text-base">Ativos em Carteira</h2>
@@ -275,8 +300,10 @@ export default function InvestimentosPage() {
         </div>
 
         {isLoading ? (
-          <div className="p-8 text-center text-sm text-muted-foreground">
-            Carregando investimentos...
+          <div className="p-6 space-y-3">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <Skeleton key={i} className="h-14 w-full rounded-xl" />
+            ))}
           </div>
         ) : investments.length === 0 ? (
           <div className="p-10 text-center">
@@ -285,7 +312,7 @@ export default function InvestimentosPage() {
             <p className="text-sm text-muted-foreground max-w-sm mx-auto mt-1">
               Cadastre seus ativos de renda fixa, fundos ou ações para acompanhar seu crescimento patrimonial real.
             </p>
-            <Button onClick={handleOpenNew} className="mt-4 gap-2">
+            <Button onClick={handleOpenNew} size="sm" className="mt-4 gap-2 text-xs">
               <Plus className="h-4 w-4" /> Cadastrar Primeiro Ativo
             </Button>
           </div>
@@ -295,12 +322,12 @@ export default function InvestimentosPage() {
               <thead className="bg-muted/50 text-muted-foreground text-xs font-medium text-left border-b">
                 <tr>
                   <th className="py-3 px-4">Ativo / Código</th>
-                  <th className="py-3 px-4">Classe</th>
-                  <th className="py-3 px-4">Instituição</th>
-                  <th className="py-3 px-4 text-right">Custo Aportado</th>
+                  <th className="py-3 px-4 hidden md:table-cell">Classe</th>
+                  <th className="py-3 px-4 hidden lg:table-cell">Instituição</th>
+                  <th className="py-3 px-4 text-right hidden sm:table-cell">Custo Aportado</th>
                   <th className="py-3 px-4 text-right">Saldo Atual</th>
                   <th className="py-3 px-4 text-right">Rentabilidade</th>
-                  <th className="py-3 px-4 text-center">Ações Rápidas</th>
+                  <th className="py-3 px-4 text-center hidden md:table-cell">Ações Rápidas</th>
                   <th className="py-3 px-4 text-right">Gerenciar</th>
                 </tr>
               </thead>
@@ -315,7 +342,7 @@ export default function InvestimentosPage() {
                         </span>
                       )}
                     </td>
-                    <td className="py-3.5 px-4">
+                    <td className="py-3.5 px-4 hidden md:table-cell">
                       <span className="inline-flex items-center gap-1.5 text-xs font-medium">
                         <span
                           className="h-2 w-2 rounded-full"
@@ -324,14 +351,16 @@ export default function InvestimentosPage() {
                         {TYPE_LABELS[inv.type] || inv.type}
                       </span>
                     </td>
-                    <td className="py-3.5 px-4 text-muted-foreground">{inv.institution}</td>
-                    <td className="py-3.5 px-4 text-right font-medium">
+                    <td className="py-3.5 px-4 text-muted-foreground hidden lg:table-cell">
+                      {inv.institution}
+                    </td>
+                    <td className="py-3.5 px-4 text-right font-medium tabular hidden sm:table-cell">
                       {formatCurrency(inv.total_invested)}
                     </td>
-                    <td className="py-3.5 px-4 text-right font-bold text-foreground">
+                    <td className="py-3.5 px-4 text-right font-bold text-foreground tabular">
                       {formatCurrency(inv.current_amount)}
                     </td>
-                    <td className="py-3.5 px-4 text-right">
+                    <td className="py-3.5 px-4 text-right tabular">
                       <div
                         className={`font-semibold text-xs ${
                           inv.profit_amount >= 0
@@ -353,7 +382,7 @@ export default function InvestimentosPage() {
                         {inv.profit_percent}%
                       </div>
                     </td>
-                    <td className="py-3.5 px-4">
+                    <td className="py-3.5 px-4 hidden md:table-cell">
                       <div className="flex items-center justify-center gap-1.5">
                         <Button
                           size="sm"
@@ -388,26 +417,47 @@ export default function InvestimentosPage() {
                       </div>
                     </td>
                     <td className="py-3.5 px-4 text-right">
-                      <div className="flex items-center justify-end gap-1">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-8 w-8 p-0"
-                          onClick={() => handleEdit(inv)}
-                          title="Editar"
-                        >
-                          <Edit2 className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-8 w-8 p-0 text-destructive hover:text-destructive"
-                          onClick={() => handleDelete(inv)}
-                          title="Excluir"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
+                      {confirmDeleteId === inv.id ? (
+                        <div className="flex items-center justify-end gap-1">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-7 px-2 text-xs"
+                            onClick={() => setConfirmDeleteId(null)}
+                          >
+                            Não
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            className="h-7 px-2 text-xs"
+                            onClick={() => handleConfirmDelete(inv.id)}
+                          >
+                            Excluir
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-end gap-1">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-8 w-8 p-0"
+                            onClick={() => handleEdit(inv)}
+                            title="Editar"
+                          >
+                            <Edit2 className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                            onClick={() => setConfirmDeleteId(inv.id)}
+                            title="Excluir"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      )}
                     </td>
                   </tr>
                 ))}

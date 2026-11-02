@@ -4,13 +4,16 @@ import {
   payInvoice as payInvoiceService,
   type InvoiceWithTotals,
 } from '@/services/invoices'
+import { useAuth } from '@/hooks/use-auth'
 
 export function useInvoices(cardId?: string) {
+  const { user } = useAuth()
   const queryClient = useQueryClient()
 
   const { data: invoices = [], isLoading, error } = useQuery({
-    queryKey: ['invoices', cardId],
+    queryKey: ['invoices', user?.id, cardId],
     queryFn: () => fetchInvoices(cardId),
+    enabled: !!user?.id,
   })
 
   function invalidateAll() {
@@ -46,4 +49,3 @@ export function useInvoices(cardId?: string) {
 }
 
 export type { InvoiceWithTotals }
-

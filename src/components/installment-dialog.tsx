@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import {
@@ -40,13 +40,11 @@ export function InstallmentDialog({
   const { accounts } = useAccounts()
   const { categoryTree } = useCategories()
   const [serverError, setServerError] = useState<string | null>(null)
-  const [paymentMethod, setPaymentMethod] = useState<'card' | 'account'>(
-    defaultCardId ? 'card' : 'card'
-  )
+  const [paymentMethod, setPaymentMethod] = useState<'card' | 'account'>('card')
 
-  const activeCards = cards.filter((c) => !c.is_archived)
-  const activeAccounts = accounts.filter((a) => !a.is_archived)
-  const expenseCategories = categoryTree('expense')
+  const activeCards = useMemo(() => cards.filter((c) => !c.is_archived), [cards])
+  const activeAccounts = useMemo(() => accounts.filter((a) => !a.is_archived), [accounts])
+  const expenseCategories = useMemo(() => categoryTree('expense'), [categoryTree])
 
   const {
     register,
@@ -80,6 +78,9 @@ export function InstallmentDialog({
       : 0
 
   useEffect(() => {
+    if (!open) return
+    setServerError(null)
+    setPaymentMethod('card')
     reset({
       description: '',
       total_amount: 0,
@@ -90,7 +91,8 @@ export function InstallmentDialog({
       start_date: getTodayDateString(),
       notes: '',
     })
-  }, [defaultCardId, reset, open, activeCards])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, defaultCardId, reset])
 
   const handleDialogChange = (nextOpen: boolean) => {
     if (!nextOpen) {
@@ -139,7 +141,7 @@ export function InstallmentDialog({
                 className="text-xs"
                 onClick={() => {
                   setPaymentMethod('card')
-                  setValue('card_id', activeCards[0]?.id || null)
+                  setValue('card_id', activeCards[0]?.id || null, { shouldValidate: true })
                   setValue('account_id', null)
                 }}
               >
@@ -154,7 +156,7 @@ export function InstallmentDialog({
                 onClick={() => {
                   setPaymentMethod('account')
                   setValue('card_id', null)
-                  setValue('account_id', activeAccounts[0]?.id || null)
+                  setValue('account_id', activeAccounts[0]?.id || null, { shouldValidate: true })
                 }}
               >
                 <FileText className="size-4 mr-1.5" />
@@ -237,11 +239,17 @@ export function InstallmentDialog({
                 id="inst-card"
                 disabled={isSubmitting}
                 {...register('card_id')}
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                className="flex h-10 w-full rounded-md border border-input bg-background text-foreground px-3 py-2 text-sm ring-offset-background focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                <option value="">Selecione o cartão</option>
+                <option value="" className="bg-popover text-popover-foreground">
+                  Selecione o cartão
+                </option>
                 {activeCards.map((c) => (
-                  <option key={c.id} value={c.id}>
+                  <option
+                    key={c.id}
+                    value={c.id}
+                    className="bg-popover text-popover-foreground"
+                  >
                     {c.name} ({c.institution || c.brand})
                   </option>
                 ))}
@@ -254,11 +262,17 @@ export function InstallmentDialog({
                 id="inst-account"
                 disabled={isSubmitting}
                 {...register('account_id')}
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                className="flex h-10 w-full rounded-md border border-input bg-background text-foreground px-3 py-2 text-sm ring-offset-background focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                <option value="">Nenhuma / Boleto externo</option>
+                <option value="" className="bg-popover text-popover-foreground">
+                  Nenhuma / Boleto externo
+                </option>
                 {activeAccounts.map((a) => (
-                  <option key={a.id} value={a.id}>
+                  <option
+                    key={a.id}
+                    value={a.id}
+                    className="bg-popover text-popover-foreground"
+                  >
                     {a.name}
                   </option>
                 ))}
@@ -275,14 +289,29 @@ export function InstallmentDialog({
                 disabled={isSubmitting}
                 value={selectedCategoryId || ''}
                 onChange={(e) => setValue('category_id', e.target.value || null)}
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                className="flex h-10 w-full rounded-md border border-input bg-background text-foreground px-3 py-2 text-sm ring-offset-background focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                <option value="">Sem categoria</option>
+                <option value="" className="bg-popover text-popover-foreground">
+                  Sem categoria
+                </option>
                 {expenseCategories.map((parent) => (
-                  <optgroup key={parent.id} label={parent.name}>
-                    <option value={parent.id}>{parent.name}</option>
+                  <optgroup
+                    key={parent.id}
+                    label={parent.name}
+                    className="bg-popover text-popover-foreground"
+                  >
+                    <option
+                      value={parent.id}
+                      className="bg-popover text-popover-foreground"
+                    >
+                      {parent.name}
+                    </option>
                     {(parent.children || []).map((sub) => (
-                      <option key={sub.id} value={sub.id}>
+                      <option
+                        key={sub.id}
+                        value={sub.id}
+                        className="bg-popover text-popover-foreground"
+                      >
                         ↳ {sub.name}
                       </option>
                     ))}
@@ -321,4 +350,3 @@ export function InstallmentDialog({
     </Dialog>
   )
 }
-

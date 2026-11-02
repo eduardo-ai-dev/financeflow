@@ -132,5 +132,29 @@ describe('Motor Financeiro & Regras de Negócio (Fase 2)', () => {
 
       expect(validTransfer.success).toBe(true)
     })
+
+    it('valida classificação de despesa (Fixo, Variável, Eventual, Extraordinário)', () => {
+      const validFixedExpense = transactionSchema.safeParse({
+        kind: 'expense',
+        description: 'Aluguel Mensal',
+        amount: 2200,
+        account_id: 'a0000000-0000-4000-8000-000000000001',
+        expense_classification: 'fixed',
+        status: 'completed',
+        due_date: '2026-11-05',
+      })
+      expect(validFixedExpense.success).toBe(true)
+
+      const invalidClassification = transactionSchema.safeParse({
+        kind: 'expense',
+        description: 'Gasto inválido',
+        amount: 100,
+        account_id: 'a0000000-0000-4000-8000-000000000001',
+        expense_classification: 'inexistente',
+        status: 'completed',
+        due_date: '2026-11-05',
+      })
+      expect(invalidClassification.success).toBe(false)
+    })
   })
 })

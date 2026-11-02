@@ -5,15 +5,18 @@ import {
   updateLiability as updateLiabilityService,
   deleteLiability as deleteLiabilityService,
 } from '@/services/liabilities'
+import { useAuth } from '@/hooks/use-auth'
 import type { Liability } from '@/types/database'
 import type { LiabilityFormData } from '@/lib/validations/liability'
 
 export function useLiabilities() {
+  const { user } = useAuth()
   const queryClient = useQueryClient()
 
   const { data: liabilities = [], isLoading, error } = useQuery({
-    queryKey: ['liabilities'],
+    queryKey: ['liabilities', user?.id],
     queryFn: fetchLiabilities,
+    enabled: !!user?.id,
   })
 
   function invalidateAll() {
@@ -51,4 +54,3 @@ export function useLiabilities() {
 }
 
 export type { Liability }
-

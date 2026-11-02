@@ -7,16 +7,19 @@ import {
   addAmortization as addAmortizationService,
   type PropertyWithCalculations,
 } from '@/services/properties'
+import { useAuth } from '@/hooks/use-auth'
 import type { RealEstatePropertyFormData } from '@/lib/validations/property'
 import type { RealEstateAmortizationFormData } from '@/lib/validations/amortization'
 import type { RealEstateProperty } from '@/types/database'
 
 export function useProperties() {
+  const { user } = useAuth()
   const queryClient = useQueryClient()
 
   const { data: properties = [], isLoading, error } = useQuery({
-    queryKey: ['real-estate-properties'],
+    queryKey: ['real-estate-properties', user?.id],
     queryFn: fetchProperties,
+    enabled: !!user?.id,
   })
 
   function invalidateAll() {
@@ -74,4 +77,3 @@ export function useProperties() {
 }
 
 export type { PropertyWithCalculations }
-

@@ -1,6 +1,9 @@
 import { supabase } from '@/lib/supabase'
+import { getTodayDateString } from '@/lib/date'
 import type { Transaction, Account, Category } from '@/types/database'
 import type { TransactionFormData } from '@/lib/validations/transaction'
+
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 export interface TransactionWithDetails extends Transaction {
   account?: Account | null
@@ -46,11 +49,13 @@ export async function fetchTransactions(
     query = query.eq('status', filters.status)
   }
 
-  if (filters.accountId) {
-    query = query.or(`account_id.eq.${filters.accountId},to_account_id.eq.${filters.accountId}`)
+  if (filters.accountId && UUID_REGEX.test(filters.accountId)) {
+    query = query.or(
+      `account_id.eq.${filters.accountId},to_account_id.eq.${filters.accountId}`
+    )
   }
 
-  if (filters.categoryId) {
+  if (filters.categoryId && UUID_REGEX.test(filters.categoryId)) {
     query = query.eq('category_id', filters.categoryId)
   }
 
@@ -74,9 +79,10 @@ export async function fetchTransactions(
 
 export async function createTransaction(data: TransactionFormData): Promise<Transaction> {
   const isTransfer = data.kind === 'transfer'
+  const isExpense = data.kind === 'expense'
   const isCompleted = data.status === 'completed'
 
-  const payload = {
+  const basePayload = {
     kind: data.kind,
     status: data.status,
     description: data.description.trim(),
@@ -89,13 +95,34 @@ export async function createTransaction(data: TransactionFormData): Promise<Tran
     notes: data.notes?.trim() || null,
   }
 
+  const payloadWithClassification = {
+    ...basePayload,
+    ...(isExpense && data.expense_classification
+      ? { expense_classification: data.expense_classification }
+      : {}),
+  }
+
   const { data: created, error } = await supabase
     .from('transactions')
-    .insert(payload)
+    .insert(payloadWithClassification)
     .select()
     .single()
 
-  if (error) throw error
+  if (error) {
+    // Fallback resiliente caso a migração 0007 ainda não tenha sido rodada no Supabase
+    if (error.message?.includes('expense_classification')) {
+      const { data: fallbackCreated, error: fallbackError } = await supabase
+        .from('transactions')
+        .insert(basePayload)
+        .select()
+        .single()
+
+      if (fallbackError) throw fallbackError
+      return fallbackCreated as Transaction
+    }
+    throw error
+  }
+
   return created as Transaction
 }
 
@@ -119,13 +146,22 @@ export async function updateTransaction(
     if (isTransfer) {
       payload.to_account_id = data.to_account_id
       payload.category_id = null
+      payload.expense_classification = null
     } else {
       payload.to_account_id = null
       payload.category_id = data.category_id || null
+      if (data.kind === 'expense') {
+        payload.expense_classification = data.expense_classification ?? 'variable'
+      } else {
+        payload.expense_classification = null
+      }
     }
   } else {
     if (data.to_account_id !== undefined) payload.to_account_id = data.to_account_id
     if (data.category_id !== undefined) payload.category_id = data.category_id
+    if (data.expense_classification !== undefined) {
+      payload.expense_classification = data.expense_classification
+    }
   }
 
   if (data.status !== undefined) {
@@ -142,7 +178,22 @@ export async function updateTransaction(
     .select()
     .single()
 
-  if (error) throw error
+  if (error) {
+    if (error.message?.includes('expense_classification')) {
+      const { expense_classification: _ignored, ...fallbackPayload } = payload
+      void _ignored
+      const { data: fallbackUpdated, error: fallbackError } = await supabase
+        .from('transactions')
+        .update(fallbackPayload)
+        .eq('id', id)
+        .select()
+        .single()
+      if (fallbackError) throw fallbackError
+      return fallbackUpdated as Transaction
+    }
+    throw error
+  }
+
   return updated as Transaction
 }
 
@@ -150,7 +201,7 @@ export async function markTransactionCompleted(
   id: string,
   paidDate?: string
 ): Promise<Transaction> {
-  const today = new Date().toISOString().split('T')[0]
+  const today = getTodayDateString()
   const dateToUse = paidDate || today
 
   const { data, error } = await supabase
@@ -186,4 +237,3 @@ export async function deleteTransaction(id: string): Promise<void> {
   const { error } = await supabase.from('transactions').delete().eq('id', id)
   if (error) throw error
 }
-

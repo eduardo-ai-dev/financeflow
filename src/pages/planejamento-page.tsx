@@ -138,12 +138,14 @@ export default function PlanejamentoPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8 animate-in fade-in-50 duration-200">
       {/* Top Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between pb-2 border-b">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold tracking-tight">Planejamento Futuro & Simulador</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
+              Planejamento Futuro & Simulador
+            </h1>
             <span className="rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
               <Zap className="h-3 w-3" /> Modo Sandbox
             </span>
@@ -183,7 +185,7 @@ export default function PlanejamentoPage() {
             size="sm"
             variant="outline"
             onClick={() => applyPreset('transition')}
-            className="text-xs text-amber-600"
+            className="text-xs text-amber-600 dark:text-amber-400"
           >
             Transição
           </Button>
@@ -191,7 +193,7 @@ export default function PlanejamentoPage() {
       </div>
 
       {/* Banner de Garantia Sandbox */}
-      <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 text-xs text-primary flex items-start gap-3">
+      <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4 text-xs text-primary flex items-start gap-3">
         <Info className="h-4 w-4 shrink-0 mt-0.5" />
         <div>
           <span className="font-semibold">Ambiente Isolado de Simulação:</span> Todas as projeções são calculadas em tempo real na memória.
@@ -201,12 +203,14 @@ export default function PlanejamentoPage() {
 
       {/* KPIs da Simulação */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="rounded-xl border bg-card p-4 shadow-sm">
+        <div className="rounded-2xl border bg-card p-5 shadow-xs">
           <div className="flex items-center justify-between text-muted-foreground">
-            <span className="text-xs font-medium">Patrimônio Base Projetado</span>
+            <span className="text-xs font-semibold uppercase tracking-wider">
+              Patrimônio Base
+            </span>
             <Calendar className="h-4 w-4 text-muted-foreground" />
           </div>
-          <div className="mt-2 text-2xl font-bold">
+          <div className="mt-2 tabular text-2xl font-bold">
             {formatBRL(simulation.finalBaseNetWorth)}
           </div>
           <p className="text-xs text-muted-foreground mt-1">
@@ -214,12 +218,14 @@ export default function PlanejamentoPage() {
           </p>
         </div>
 
-        <div className="rounded-xl border bg-card p-4 shadow-sm border-primary/30">
+        <div className="rounded-2xl border bg-card p-5 shadow-xs border-primary/30">
           <div className="flex items-center justify-between text-muted-foreground">
-            <span className="text-xs font-semibold text-primary">Patrimônio no Cenário Simulado</span>
+            <span className="text-xs font-semibold text-primary uppercase tracking-wider">
+              Cenário Simulado
+            </span>
             <TrendingUp className="h-4 w-4 text-primary" />
           </div>
-          <div className="mt-2 text-2xl font-black text-primary">
+          <div className="mt-2 tabular text-2xl font-black text-primary">
             {formatBRL(simulation.finalSimulatedNetWorth)}
           </div>
           <p className="text-xs text-muted-foreground mt-1">
@@ -227,13 +233,15 @@ export default function PlanejamentoPage() {
           </p>
         </div>
 
-        <div className="rounded-xl border bg-card p-4 shadow-sm">
+        <div className="rounded-2xl border bg-card p-5 shadow-xs">
           <div className="flex items-center justify-between text-muted-foreground">
-            <span className="text-xs font-medium">Diferencial Acumulado</span>
+            <span className="text-xs font-semibold uppercase tracking-wider">
+              Diferencial Acumulado
+            </span>
             <Sparkles className="h-4 w-4 text-emerald-500" />
           </div>
           <div
-            className={`mt-2 text-2xl font-bold ${
+            className={`mt-2 tabular text-2xl font-bold ${
               simulation.netWorthGain >= 0
                 ? 'text-emerald-600 dark:text-emerald-400'
                 : 'text-destructive'
@@ -249,12 +257,14 @@ export default function PlanejamentoPage() {
           </p>
         </div>
 
-        <div className="rounded-xl border bg-card p-4 shadow-sm">
+        <div className="rounded-2xl border bg-card p-5 shadow-xs">
           <div className="flex items-center justify-between text-muted-foreground">
-            <span className="text-xs font-medium">Capacidade de Poupança / Mês</span>
+            <span className="text-xs font-semibold uppercase tracking-wider">
+              Poupança / Mês
+            </span>
             <Layers className="h-4 w-4 text-amber-500" />
           </div>
-          <div className="mt-2 text-2xl font-bold text-amber-600 dark:text-amber-400">
+          <div className="mt-2 tabular text-2xl font-bold text-amber-600 dark:text-amber-400">
             {formatBRL(simulation.monthlySavingsSimulated)}
           </div>
           <p className="text-xs text-muted-foreground mt-1">
@@ -266,7 +276,7 @@ export default function PlanejamentoPage() {
       {/* Painel Central: Controles do Sandbox e Gráfico de Projeção */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Painel de Controles */}
-        <div className="rounded-xl border bg-card p-5 shadow-sm space-y-4 lg:col-span-1">
+        <div className="rounded-2xl border bg-card p-5 shadow-xs space-y-4 lg:col-span-1">
           <div className="flex items-center gap-2 pb-2 border-b">
             <SlidersHorizontal className="h-4 w-4 text-primary" />
             <h2 className="font-semibold text-sm">Parâmetros do Cenário</h2>
@@ -285,7 +295,7 @@ export default function PlanejamentoPage() {
                   key={h.months}
                   type="button"
                   onClick={() => setHorizonMonths(h.months)}
-                  className={`px-2 py-1.5 text-xs font-medium rounded-md border text-center transition-all ${
+                  className={`px-2 py-1.5 text-xs font-medium rounded-md border text-center transition-all cursor-pointer ${
                     horizonMonths === h.months
                       ? 'border-primary bg-primary/10 text-primary font-bold'
                       : 'border-border bg-card text-muted-foreground hover:bg-accent'
@@ -298,7 +308,7 @@ export default function PlanejamentoPage() {
           </div>
 
           <div>
-            <div className="flex justify-between text-xs">
+            <div className="flex justify-between text-xs tabular">
               <Label htmlFor="income-adj">Variação de Receitas (%)</Label>
               <span className="font-semibold text-primary">
                 {incomeAdjPercent >= 0 ? `+${incomeAdjPercent}%` : `${incomeAdjPercent}%`}
@@ -310,7 +320,7 @@ export default function PlanejamentoPage() {
               step="1"
               value={incomeAdjPercent}
               onChange={(e) => setIncomeAdjPercent(Number(e.target.value))}
-              className="mt-1"
+              className="mt-1 tabular"
             />
             <span className="text-[11px] text-muted-foreground">
               Ex: +15% para aumento de salário ou -20% para perda de renda.
@@ -318,7 +328,7 @@ export default function PlanejamentoPage() {
           </div>
 
           <div>
-            <div className="flex justify-between text-xs">
+            <div className="flex justify-between text-xs tabular">
               <Label htmlFor="expense-adj">Ajuste Mensal de Gastos (R$)</Label>
               <span className="font-semibold text-primary">
                 {expenseAdjFixed >= 0 ? `+${expenseAdjFixed}` : `${expenseAdjFixed}`}
@@ -330,7 +340,7 @@ export default function PlanejamentoPage() {
               step="50"
               value={expenseAdjFixed}
               onChange={(e) => setExpenseAdjFixed(Number(e.target.value))}
-              className="mt-1"
+              className="mt-1 tabular"
             />
             <span className="text-[11px] text-muted-foreground">
               Negativo = corte de gastos. Positivo = novo compromisso.
@@ -338,9 +348,9 @@ export default function PlanejamentoPage() {
           </div>
 
           <div>
-            <div className="flex justify-between text-xs">
+            <div className="flex justify-between text-xs tabular">
               <Label htmlFor="contrib-adj">Aporte Mensal em Investimentos (R$)</Label>
-              <span className="font-semibold text-emerald-600">
+              <span className="font-semibold text-emerald-600 dark:text-emerald-400">
                 {formatBRL(monthlyContribution)}
               </span>
             </div>
@@ -350,12 +360,12 @@ export default function PlanejamentoPage() {
               step="50"
               value={monthlyContribution}
               onChange={(e) => setMonthlyContribution(Number(e.target.value))}
-              className="mt-1"
+              className="mt-1 tabular"
             />
           </div>
 
           <div>
-            <div className="flex justify-between text-xs">
+            <div className="flex justify-between text-xs tabular">
               <Label htmlFor="return-rate">Rentabilidade Estimada dos Ativos (% a.a.)</Label>
               <span className="font-semibold text-primary">{annualReturnRate}% a.a.</span>
             </div>
@@ -365,13 +375,13 @@ export default function PlanejamentoPage() {
               step="0.5"
               value={annualReturnRate}
               onChange={(e) => setAnnualReturnRate(Number(e.target.value))}
-              className="mt-1"
+              className="mt-1 tabular"
             />
           </div>
         </div>
 
         {/* Gráfico Comparativo de Trajetória Patrimonial */}
-        <div className="rounded-xl border bg-card p-5 shadow-sm space-y-4 lg:col-span-2 flex flex-col justify-between">
+        <div className="rounded-2xl border bg-card p-5 shadow-xs space-y-4 lg:col-span-2 flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between pb-2 border-b">
               <div>
@@ -417,9 +427,10 @@ export default function PlanejamentoPage() {
             </div>
           </div>
 
-          <div className="rounded-lg bg-muted/30 p-3 text-xs text-muted-foreground flex justify-between items-center">
+          <div className="rounded-xl bg-muted/30 p-3 text-xs text-muted-foreground flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 tabular">
             <span>
-              Saldo Inicial de Caixa + Investimentos: {formatBRL(summary.assetsBreakdown.cash + summary.assetsBreakdown.investments)}
+              Saldo Inicial de Caixa + Investimentos:{' '}
+              {formatBRL(summary.assetsBreakdown.cash + summary.assetsBreakdown.investments)}
             </span>
             <span className="font-medium text-foreground">
               Ganho Final em {horizonMonths} meses: {formatBRL(simulation.netWorthGain)}
@@ -429,10 +440,12 @@ export default function PlanejamentoPage() {
       </div>
 
       {/* Adição de Eventos Específicos / Extraordinários no Sandbox */}
-      <div className="rounded-xl border bg-card p-5 shadow-sm space-y-4">
+      <div className="rounded-2xl border bg-card p-5 shadow-xs space-y-4">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="font-semibold text-sm">Eventos Avulsos & Choques de Caixa na Simulação</h2>
+            <h2 className="font-semibold text-sm">
+              Eventos Avulsos & Choques de Caixa na Simulação
+            </h2>
             <p className="text-xs text-muted-foreground">
               Simule a ocorrência de entradas ou saídas extraordinárias em meses futuros específicos.
             </p>
@@ -441,7 +454,9 @@ export default function PlanejamentoPage() {
 
         <form onSubmit={handleAddEvent} className="grid grid-cols-1 sm:grid-cols-5 gap-3 items-end">
           <div className="sm:col-span-2">
-            <Label htmlFor="evt-name" className="text-xs">Descrição do Evento</Label>
+            <Label htmlFor="evt-name" className="text-xs">
+              Descrição do Evento
+            </Label>
             <Input
               id="evt-name"
               placeholder="Ex: 13º Salário, Troca de Carro, Bônus..."
@@ -451,12 +466,14 @@ export default function PlanejamentoPage() {
           </div>
 
           <div>
-            <Label htmlFor="evt-type" className="text-xs">Impacto</Label>
+            <Label htmlFor="evt-type" className="text-xs">
+              Impacto
+            </Label>
             <select
               id="evt-type"
               value={eventType}
               onChange={(e) => setEventType(e.target.value as 'income' | 'expense')}
-              className="mt-1 flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
+              className="mt-1 flex h-9 w-full rounded-md border border-input bg-background text-foreground px-3 py-1 text-sm shadow-2xs"
             >
               <option value="income" className="bg-popover text-popover-foreground">
                 Entrada (+ R$)
@@ -468,7 +485,9 @@ export default function PlanejamentoPage() {
           </div>
 
           <div>
-            <Label htmlFor="evt-month" className="text-xs">No Mês</Label>
+            <Label htmlFor="evt-month" className="text-xs">
+              No Mês
+            </Label>
             <Input
               id="evt-month"
               type="number"
@@ -476,11 +495,14 @@ export default function PlanejamentoPage() {
               max={horizonMonths}
               value={eventMonth}
               onChange={(e) => setEventMonth(Number(e.target.value))}
+              className="tabular"
             />
           </div>
 
           <div>
-            <Label htmlFor="evt-amt" className="text-xs">Valor (R$)</Label>
+            <Label htmlFor="evt-amt" className="text-xs">
+              Valor (R$)
+            </Label>
             <div className="flex gap-2">
               <Input
                 id="evt-amt"
@@ -489,6 +511,7 @@ export default function PlanejamentoPage() {
                 placeholder="0.00"
                 value={eventAmount}
                 onChange={(e) => setEventAmount(e.target.value)}
+                className="tabular"
               />
               <Button type="submit" size="sm" className="shrink-0">
                 + Inserir
@@ -502,14 +525,14 @@ export default function PlanejamentoPage() {
             {events.map((evt) => (
               <span
                 key={evt.id}
-                className="inline-flex items-center gap-1.5 rounded-full border bg-muted/40 px-3 py-1 text-xs"
+                className="inline-flex items-center gap-1.5 rounded-full border bg-muted/40 px-3 py-1 text-xs tabular"
               >
                 <span className="font-medium">{evt.name}</span>
                 <span className="text-muted-foreground">(Mês {evt.month}):</span>
                 <span
                   className={
                     evt.type === 'income'
-                      ? 'text-emerald-600 font-semibold'
+                      ? 'text-emerald-600 dark:text-emerald-400 font-semibold'
                       : 'text-destructive font-semibold'
                   }
                 >
@@ -519,7 +542,7 @@ export default function PlanejamentoPage() {
                 <button
                   type="button"
                   onClick={() => handleRemoveEvent(evt.id)}
-                  className="ml-1 text-muted-foreground hover:text-destructive"
+                  className="ml-1 text-muted-foreground hover:text-destructive cursor-pointer"
                 >
                   &times;
                 </button>

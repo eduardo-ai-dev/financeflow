@@ -65,6 +65,24 @@ describe('Fase 5 — Validações de Metas e Wishlist', () => {
     const result = goalSchema.safeParse(wishlist)
     expect(result.success).toBe(true)
   })
+
+  it('rejeita URL de imagem com protocolo inseguro (ex: javascript:)', () => {
+    const unsafeGoal = {
+      name: 'Meta com imagem insegura',
+      priority: 'medium',
+      target_amount: 1000,
+      current_amount: 0,
+      status: 'planned',
+      image_url: 'javascript:alert(1)',
+    }
+    expect(goalSchema.safeParse(unsafeGoal).success).toBe(false)
+
+    const safeHttpsGoal = {
+      ...unsafeGoal,
+      image_url: 'https://images.unsplash.com/photo-12345',
+    }
+    expect(goalSchema.safeParse(safeHttpsGoal).success).toBe(true)
+  })
 })
 
 describe('Fase 5 — Validações de Ativos Patrimoniais', () => {

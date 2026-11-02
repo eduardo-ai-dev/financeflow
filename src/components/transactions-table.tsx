@@ -22,6 +22,13 @@ import {
   ArrowRightLeft,
 } from 'lucide-react'
 
+const CLASSIFICATION_LABELS: Record<string, string> = {
+  fixed: 'Fixo',
+  variable: 'Variável',
+  occasional: 'Eventual',
+  extraordinary: 'Extraordinário',
+}
+
 interface TransactionsTableProps {
   transactions: TransactionWithDetails[]
   isLoading?: boolean
@@ -89,6 +96,10 @@ export function TransactionsTable({
               const isOverdue = tx.status === 'pending' && tx.due_date < todayStr
               const isIncome = tx.kind === 'income'
               const isTransfer = tx.kind === 'transfer'
+              const classificationLabel =
+                tx.kind === 'expense' && tx.expense_classification
+                  ? CLASSIFICATION_LABELS[tx.expense_classification]
+                  : null
 
               return (
                 <tr
@@ -100,7 +111,7 @@ export function TransactionsTable({
                     <button
                       type="button"
                       onClick={() => onToggleStatus?.(tx)}
-                      className="inline-flex items-center gap-1.5 text-xs font-medium rounded-full px-2.5 py-0.5 transition-transform hover:scale-105"
+                      className="inline-flex items-center gap-1.5 text-xs font-medium rounded-full px-2.5 py-0.5 transition-transform hover:scale-105 cursor-pointer"
                       title={
                         tx.status === 'completed'
                           ? 'Clique para voltar para pendente'
@@ -133,7 +144,14 @@ export function TransactionsTable({
 
                   {/* Descrição */}
                   <td className="py-3.5 px-4 font-medium text-foreground max-w-xs truncate">
-                    <span>{tx.description}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="truncate">{tx.description}</span>
+                      {classificationLabel && (
+                        <span className="inline-flex items-center rounded-md bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground shrink-0">
+                          {classificationLabel}
+                        </span>
+                      )}
+                    </div>
                     {tx.notes && (
                       <p className="text-[11px] text-muted-foreground truncate">{tx.notes}</p>
                     )}
@@ -249,15 +267,24 @@ export function TransactionsTable({
           const isOverdue = tx.status === 'pending' && tx.due_date < todayStr
           const isIncome = tx.kind === 'income'
           const isTransfer = tx.kind === 'transfer'
+          const classificationLabel =
+            tx.kind === 'expense' && tx.expense_classification
+              ? CLASSIFICATION_LABELS[tx.expense_classification]
+              : null
 
           return (
             <div key={tx.id} className="p-4 space-y-3">
               <div className="flex items-start justify-between gap-2">
                 <div className="space-y-1">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-semibold text-foreground text-sm">
                       {tx.description}
                     </span>
+                    {classificationLabel && (
+                      <span className="inline-flex items-center rounded-md bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+                        {classificationLabel}
+                      </span>
+                    )}
                   </div>
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
                     <span>{formatDate(tx.due_date)}</span>
@@ -298,7 +325,7 @@ export function TransactionsTable({
                   <button
                     type="button"
                     onClick={() => onToggleStatus?.(tx)}
-                    className="text-xs"
+                    className="text-xs cursor-pointer"
                   >
                     {tx.status === 'completed' ? (
                       <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full font-medium">

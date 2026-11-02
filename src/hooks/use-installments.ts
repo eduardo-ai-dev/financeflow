@@ -5,14 +5,17 @@ import {
   cancelInstallment as cancelInstallmentService,
   type InstallmentWithDetails,
 } from '@/services/installments'
+import { useAuth } from '@/hooks/use-auth'
 import type { InstallmentFormData } from '@/lib/validations/installment'
 
 export function useInstallments(status?: string) {
+  const { user } = useAuth()
   const queryClient = useQueryClient()
 
   const { data: installments = [], isLoading, error } = useQuery({
-    queryKey: ['installments', status],
+    queryKey: ['installments', user?.id, status],
     queryFn: () => fetchInstallments(status),
+    enabled: !!user?.id,
   })
 
   function invalidateAll() {
@@ -49,4 +52,3 @@ export function useInstallments(status?: string) {
 }
 
 export type { InstallmentWithDetails }
-

@@ -91,6 +91,7 @@ export function Sidebar({
                   <NavLink
                     key={item.id}
                     to={item.path}
+                    end={item.path === '/'}
                     onClick={() => {
                       if (isMobileOpen) onCloseMobile()
                     }}

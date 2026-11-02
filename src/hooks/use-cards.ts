@@ -7,14 +7,17 @@ import {
   deleteCreditCard as deleteCreditCardService,
   type CreditCardWithLimit,
 } from '@/services/cards'
+import { useAuth } from '@/hooks/use-auth'
 import type { CreditCardFormData } from '@/lib/validations/card'
 
 export function useCards() {
+  const { user } = useAuth()
   const queryClient = useQueryClient()
 
   const { data: cards = [], isLoading, error } = useQuery({
-    queryKey: ['credit-cards'],
+    queryKey: ['credit-cards', user?.id],
     queryFn: fetchCreditCardsWithLimits,
+    enabled: !!user?.id,
   })
 
   function invalidateCardData() {
@@ -74,4 +77,3 @@ export function useCards() {
 }
 
 export type { CreditCardWithLimit }
-

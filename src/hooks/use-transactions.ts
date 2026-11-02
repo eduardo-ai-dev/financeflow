@@ -9,12 +9,14 @@ import {
   type TransactionFilters,
   type TransactionWithDetails,
 } from '@/services/transactions'
+import { useAuth } from '@/hooks/use-auth'
 import type { TransactionFormData } from '@/lib/validations/transaction'
 
 export function useTransactions(filters: TransactionFilters = {}) {
+  const { user } = useAuth()
   const queryClient = useQueryClient()
 
-  const queryKey = ['transactions', filters]
+  const queryKey = ['transactions', user?.id, filters]
 
   const {
     data: transactions = [],
@@ -24,6 +26,7 @@ export function useTransactions(filters: TransactionFilters = {}) {
   } = useQuery({
     queryKey,
     queryFn: () => fetchTransactions(filters),
+    enabled: !!user?.id,
   })
 
   function invalidateAllFinancialData() {
@@ -88,4 +91,3 @@ export function useTransactions(filters: TransactionFilters = {}) {
 }
 
 export type { TransactionWithDetails }
-

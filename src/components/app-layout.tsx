@@ -1,7 +1,8 @@
 import { useState, useEffect, Suspense } from 'react'
-import { Outlet } from 'react-router-dom'
+import { Outlet, useLocation } from 'react-router-dom'
 import { Sidebar } from '@/components/sidebar'
 import { Header } from '@/components/header'
+import { RouteErrorBoundary } from '@/components/route-error-boundary'
 import { Loader2 } from 'lucide-react'
 
 const SIDEBAR_STORAGE_KEY = 'financeflow-sidebar-collapsed'
@@ -18,6 +19,7 @@ function PageFallback() {
 }
 
 export function AppLayout() {
+  const location = useLocation()
   const [isCollapsed, setIsCollapsed] = useState(() => {
     try {
       return localStorage.getItem(SIDEBAR_STORAGE_KEY) === 'true'
@@ -34,6 +36,13 @@ export function AppLayout() {
       // Ignora erro se localStorage indisponível
     }
   }, [isCollapsed])
+
+  // Garante que ao navegar entre rotas nenhum bloqueio residual de pointer-events permaneça no body
+  useEffect(() => {
+    if (document.body.style.pointerEvents === 'none') {
+      document.body.style.pointerEvents = ''
+    }
+  }, [location.pathname])
 
   return (
     <div className="min-h-svh bg-background text-foreground">
@@ -54,12 +63,13 @@ export function AppLayout() {
         <Header onOpenMobileSidebar={() => setIsMobileOpen(true)} />
 
         <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto">
-          <Suspense fallback={<PageFallback />}>
-            <Outlet />
-          </Suspense>
+          <RouteErrorBoundary key={location.pathname}>
+            <Suspense key={location.pathname} fallback={<PageFallback />}>
+              <Outlet />
+            </Suspense>
+          </RouteErrorBoundary>
         </main>
       </div>
     </div>
   )
 }
-

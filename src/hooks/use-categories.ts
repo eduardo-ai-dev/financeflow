@@ -1,3 +1,4 @@
+import { useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   fetchCategories,
@@ -8,28 +9,34 @@ import {
   seedDefaultCategories,
   type CategoryWithChildren,
 } from '@/services/categories'
+import { useAuth } from '@/hooks/use-auth'
 import type { CategoryFormData } from '@/lib/validations/category'
 import type { Category } from '@/types/database'
 
 export function useCategories() {
+  const { user } = useAuth()
   const queryClient = useQueryClient()
 
   const { data: categories = [], isLoading, error } = useQuery({
-    queryKey: ['categories'],
+    queryKey: ['categories', user?.id],
     queryFn: fetchCategories,
+    enabled: !!user?.id,
   })
 
-  // Organiza categorias em árvore (pais com lista de filhas)
-  const categoryTree = (kind?: 'income' | 'expense') => {
-    const filtered = kind ? categories.filter((c) => c.kind === kind) : categories
-    const parents = filtered.filter((c) => !c.parent_id)
-    const children = filtered.filter((c) => !!c.parent_id)
+  // Organiza categorias em árvore (pais com lista de filhas) com referência estável
+  const categoryTree = useCallback(
+    (kind?: 'income' | 'expense') => {
+      const filtered = kind ? categories.filter((c) => c.kind === kind) : categories
+      const parents = filtered.filter((c) => !c.parent_id)
+      const children = filtered.filter((c) => !!c.parent_id)
 
-    return parents.map((parent) => ({
-      ...parent,
-      children: children.filter((c) => c.parent_id === parent.id),
-    })) as CategoryWithChildren[]
-  }
+      return parents.map((parent) => ({
+        ...parent,
+        children: children.filter((c) => c.parent_id === parent.id),
+      })) as CategoryWithChildren[]
+    },
+    [categories]
+  )
 
   const createMutation = useMutation({
     mutationFn: (data: CategoryFormData) => createCategoryService(data),
@@ -92,4 +99,3 @@ export function useCategories() {
 }
 
 export type { Category, CategoryWithChildren }
-

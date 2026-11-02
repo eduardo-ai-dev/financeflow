@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useAuth } from '@/hooks/use-auth'
 import { useTheme } from '@/hooks/use-theme'
 import { supabase } from '@/lib/supabase'
+import { getTodayDateString } from '@/lib/date'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -84,7 +85,7 @@ export default function ConfiguracoesPage() {
       link.href = url
       link.setAttribute(
         'download',
-        `financeflow_backup_completo_${new Date().toISOString().substring(0, 10)}.json`
+        `financeflow_backup_completo_${getTodayDateString()}.json`
       )
       document.body.appendChild(link)
       link.click()
@@ -102,17 +103,19 @@ export default function ConfiguracoesPage() {
   }
 
   return (
-    <div className="space-y-6 max-w-4xl">
+    <div className="space-y-8 max-w-4xl animate-in fade-in-50 duration-200">
       {/* Top Header */}
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Configurações & Soberania</h1>
+      <div className="pb-2 border-b">
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
+          Configurações & Soberania
+        </h1>
         <p className="text-sm text-muted-foreground mt-0.5">
           Perfil de usuário, preferências do sistema, backup integral e auditoria das regras contábeis.
         </p>
       </div>
 
       {/* Perfil de Usuário */}
-      <div className="rounded-xl border bg-card p-6 shadow-sm space-y-4">
+      <div className="rounded-2xl border bg-card p-6 shadow-xs space-y-4">
         <div className="flex items-center gap-2 pb-3 border-b">
           <User className="h-5 w-5 text-primary" />
           <h2 className="font-semibold text-base">Perfil de Acesso</h2>
@@ -139,7 +142,7 @@ export default function ConfiguracoesPage() {
       </div>
 
       {/* Tema e Aparência */}
-      <div className="rounded-xl border bg-card p-6 shadow-sm space-y-4">
+      <div className="rounded-2xl border bg-card p-6 shadow-xs space-y-4">
         <div className="flex items-center gap-2 pb-3 border-b">
           <Settings className="h-5 w-5 text-primary" />
           <h2 className="font-semibold text-base">Tema & Interface Visual</h2>
@@ -149,7 +152,7 @@ export default function ConfiguracoesPage() {
           <div>
             <p className="text-sm font-medium">Modo de Exibição</p>
             <p className="text-xs text-muted-foreground">
-              Alterne entre o tema claro, escuro ou siga a preferência do sistema operacional.
+              Alterne entre o tema claro ou escuro com contraste otimizado para leitura numérica.
             </p>
           </div>
 
@@ -158,7 +161,7 @@ export default function ConfiguracoesPage() {
               variant={theme === 'light' ? 'default' : 'outline'}
               size="sm"
               onClick={() => setTheme('light')}
-              className="gap-1.5"
+              className="gap-1.5 text-xs"
             >
               <Sun className="h-4 w-4" /> Claro
             </Button>
@@ -166,7 +169,7 @@ export default function ConfiguracoesPage() {
               variant={theme === 'dark' ? 'default' : 'outline'}
               size="sm"
               onClick={() => setTheme('dark')}
-              className="gap-1.5"
+              className="gap-1.5 text-xs"
             >
               <Moon className="h-4 w-4" /> Escuro
             </Button>
@@ -175,7 +178,7 @@ export default function ConfiguracoesPage() {
       </div>
 
       {/* Backup e Soberania Total dos Dados */}
-      <div className="rounded-xl border bg-card p-6 shadow-sm space-y-4">
+      <div className="rounded-2xl border bg-card p-6 shadow-xs space-y-4">
         <div className="flex items-center gap-2 pb-3 border-b">
           <Download className="h-5 w-5 text-primary" />
           <div>
@@ -186,11 +189,11 @@ export default function ConfiguracoesPage() {
           </div>
         </div>
 
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-muted/20 p-4 rounded-lg">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-muted/20 p-4 rounded-xl">
           <div>
             <h4 className="font-medium text-sm">Download do Arquivo de Backup (JSON)</h4>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Gera um arquivo padronizado com todas as 11 tabelas do sistema para custódia offline.
+              Gera um arquivo padronizado com todas as tabelas do sistema para custódia offline.
             </p>
             {exportMessage && (
               <p className="text-xs font-semibold text-primary mt-1.5">{exportMessage}</p>
@@ -200,7 +203,8 @@ export default function ConfiguracoesPage() {
           <Button
             onClick={handleExportFullBackup}
             disabled={isExporting}
-            className="gap-2 shrink-0"
+            size="sm"
+            className="gap-2 shrink-0 text-xs"
           >
             {isExporting ? (
               <>
@@ -217,7 +221,7 @@ export default function ConfiguracoesPage() {
       </div>
 
       {/* Checklist de Conformidade com as 7 Regras Inegociáveis */}
-      <div className="rounded-xl border bg-card p-6 shadow-sm space-y-4">
+      <div className="rounded-2xl border bg-card p-6 shadow-xs space-y-4">
         <div className="flex items-center gap-2 pb-3 border-b">
           <ShieldCheck className="h-5 w-5 text-emerald-500" />
           <div>
@@ -266,10 +270,12 @@ export default function ConfiguracoesPage() {
               desc: 'Todos os valores e gráficos refletem consultas reais via PostgreSQL e RLS.',
             },
           ].map((r) => (
-            <div key={r.num} className="p-3 rounded-lg border bg-muted/10 space-y-1">
+            <div key={r.num} className="p-3 rounded-xl border bg-muted/10 space-y-1">
               <div className="flex items-center gap-1.5 font-semibold text-foreground">
                 <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
-                <span>Regra {r.num}: {r.title}</span>
+                <span>
+                  Regra {r.num}: {r.title}
+                </span>
               </div>
               <p className="text-muted-foreground pl-5">{r.desc}</p>
             </div>
@@ -278,16 +284,16 @@ export default function ConfiguracoesPage() {
       </div>
 
       {/* Encerramento de Sessão */}
-      <div className="rounded-xl border border-destructive/20 bg-destructive/5 p-6 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      <div className="rounded-2xl border border-destructive/20 bg-destructive/5 p-6 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h3 className="font-semibold text-base text-destructive flex items-center gap-2">
             <AlertTriangle className="h-4 w-4" /> Encerrar Sessão
           </h3>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Desconecta seu login e limpa tokens de autenticação locais deste navegador.
+            Desconecta seu login e limpa tokens e cache de autenticação locais deste navegador.
           </p>
         </div>
-        <Button variant="destructive" onClick={() => signOut()} className="gap-2 shrink-0">
+        <Button variant="destructive" size="sm" onClick={() => signOut()} className="gap-2 shrink-0 text-xs">
           <LogOut className="h-4 w-4" /> Sair da Conta
         </Button>
       </div>

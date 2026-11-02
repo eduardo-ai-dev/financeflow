@@ -82,6 +82,7 @@
 
 /* ---------- Light ---------- */
 :root {
+    color-scheme: light;
     --radius: 0.75rem;
 
     --background: oklch(0.985 0.003 250);
@@ -135,6 +136,7 @@
 
 /* ---------- Dark (padrão do app) ---------- */
 .dark {
+    color-scheme: dark;
     --background: oklch(0.16 0.015 260);
     --foreground: oklch(0.97 0.005 250);
     --card: oklch(0.2 0.018 260);
@@ -193,6 +195,11 @@
   }
   html {
     @apply font-sans;
+  }
+  select option,
+  select optgroup {
+    background-color: var(--popover);
+    color: var(--popover-foreground);
   }
 }
 

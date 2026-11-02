@@ -37,3 +37,4 @@ left join lateral (
     and t.kind = 'card_purchase'
     and (inv.status is null or inv.status in ('open', 'closed', 'overdue'))
 ) used on true;
+

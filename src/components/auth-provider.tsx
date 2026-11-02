@@ -1,14 +1,17 @@
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import type { Session, User } from '@supabase/supabase-js'
+import { useQueryClient } from '@tanstack/react-query'
 import { AuthContext, type AuthContextValue, type SignUpResult } from '@/lib/auth-context'
 import { supabase } from '@/lib/supabase'
 import type { Profile } from '@/types/database'
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const queryClient = useQueryClient()
   const [session, setSession] = useState<Session | null>(null)
   const [user, setUser] = useState<User | null>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const previousUserIdRef = useRef<string | null>(null)
 
   const fetchProfile = useCallback(async (userId: string) => {
     try {
@@ -39,9 +42,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     async function initializeAuth() {
       try {
-        const { data: { session: initialSession } } = await supabase.auth.getSession()
+        const {
+          data: { session: initialSession },
+        } = await supabase.auth.getSession()
         if (!isMounted) return
 
+        previousUserIdRef.current = initialSession?.user?.id ?? null
         setSession(initialSession)
         setUser(initialSession?.user ?? null)
 
@@ -57,60 +63,86 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     initializeAuth()
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, currentSession) => {
-        if (!isMounted) return
-        setSession(currentSession)
-        setUser(currentSession?.user ?? null)
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
+      if (!isMounted) return
 
-        if (currentSession?.user) {
-          await fetchProfile(currentSession.user.id)
-        } else {
-          setProfile(null)
-        }
-        setIsLoading(false)
+      const nextUserId = currentSession?.user?.id ?? null
+      if (
+        event === 'SIGNED_OUT' ||
+        (previousUserIdRef.current && previousUserIdRef.current !== nextUserId)
+      ) {
+        queryClient.clear()
       }
-    )
+      previousUserIdRef.current = nextUserId
+
+      setSession(currentSession)
+      setUser(currentSession?.user ?? null)
+
+      if (currentSession?.user) {
+        await fetchProfile(currentSession.user.id)
+      } else {
+        setProfile(null)
+      }
+      setIsLoading(false)
+    })
 
     return () => {
       isMounted = false
       subscription.unsubscribe()
     }
-  }, [fetchProfile])
+  }, [fetchProfile, queryClient])
 
-  const signInWithPassword = useCallback(async ({ email, password }: { email: string; password: string }) => {
-    const { error } = await supabase.auth.signInWithPassword({
-      email: email.trim(),
-      password,
-    })
-    return { error }
-  }, [])
+  const signInWithPassword = useCallback(
+    async ({ email, password }: { email: string; password: string }) => {
+      const { error } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password,
+      })
+      return { error }
+    },
+    []
+  )
 
-  const signUp = useCallback(async ({ email, password, fullName }: { email: string; password: string; fullName: string }): Promise<SignUpResult> => {
-    const trimmedName = fullName.trim()
-    const { data, error } = await supabase.auth.signUp({
-      email: email.trim(),
+  const signUp = useCallback(
+    async ({
+      email,
       password,
-      options: {
-        data: {
-          full_name: trimmedName,
+      fullName,
+    }: {
+      email: string
+      password: string
+      fullName: string
+    }): Promise<SignUpResult> => {
+      const trimmedName = fullName.trim()
+      const { data, error } = await supabase.auth.signUp({
+        email: email.trim(),
+        password,
+        options: {
+          data: {
+            full_name: trimmedName,
+          },
         },
-      },
-    })
+      })
 
-    return {
-      error,
-      user: data.user,
-      requiresEmailConfirmation: !data.session && !!data.user,
-    }
-  }, [])
+      return {
+        error,
+        user: data.user,
+        requiresEmailConfirmation: !data.session && !!data.user,
+      }
+    },
+    []
+  )
 
   const signOut = useCallback(async () => {
     await supabase.auth.signOut()
+    queryClient.clear()
+    previousUserIdRef.current = null
     setSession(null)
     setUser(null)
     setProfile(null)
-  }, [])
+  }, [queryClient])
 
   const resetPasswordForEmail = useCallback(async (email: string) => {
     const redirectUrl = `${window.location.origin}/reset-password`
