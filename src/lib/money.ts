@@ -119,3 +119,5 @@ export function calcPercentage(partInCents: number, totalInCents: number): numbe
   return Math.round(ratio * 10) / 10
 }
 
+
+export const formatCurrency = formatBRL

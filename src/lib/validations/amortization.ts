@@ -9,3 +9,4 @@ export const realEstateAmortizationSchema = z.object({
 })
 
 export type RealEstateAmortizationFormData = z.infer<typeof realEstateAmortizationSchema>
+

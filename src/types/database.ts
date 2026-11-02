@@ -168,6 +168,54 @@ export interface RealEstateAmortization {
   created_at: string
 }
 
+export type GoalPriority = 'low' | 'medium' | 'high' | 'essential'
+export type GoalStatus = 'planned' | 'in_progress' | 'completed' | 'canceled'
+
+export interface Goal {
+  id: string
+  user_id: string
+  name: string
+  brand: string | null
+  priority: GoalPriority
+  target_amount: number
+  current_amount: number
+  target_date: string | null
+  account_id: string | null
+  category_id: string | null
+  status: GoalStatus
+  purchased_amount: number | null
+  purchased_date: string | null
+  converted_to_asset: boolean
+  asset_id: string | null
+  image_url: string | null
+  notes: string | null
+  created_at: string
+  updated_at: string
+}
+
+export type AssetType =
+  | 'real_estate'
+  | 'vehicle'
+  | 'electronics'
+  | 'furniture'
+  | 'jewelry'
+  | 'other'
+
+export interface Asset {
+  id: string
+  user_id: string
+  name: string
+  type: AssetType
+  acquisition_value: number
+  current_value: number
+  acquisition_date: string
+  goal_id: string | null
+  property_id: string | null
+  notes: string | null
+  created_at: string
+  updated_at: string
+}
+
 export type TransactionKind =
   | 'income'
   | 'expense'
@@ -208,4 +256,85 @@ export interface AccountBalance {
   opening_balance: number
   current_balance: number
   projected_balance: number
+}
+
+export type InvestmentType =
+  | 'fixed_income'
+  | 'stocks'
+  | 'reits'
+  | 'etf'
+  | 'crypto'
+  | 'funds'
+  | 'pension'
+  | 'other'
+
+export type LiquidityType =
+  | 'daily'
+  | 'd_plus_1'
+  | 'd_plus_30'
+  | 'at_maturity'
+  | 'locked'
+
+export interface Investment {
+  id: string
+  user_id: string
+  name: string
+  ticker: string | null
+  type: InvestmentType
+  institution: string
+  initial_amount: number
+  total_invested: number
+  current_amount: number
+  start_date: string
+  due_date: string | null
+  liquidity: LiquidityType
+  benchmark: string | null
+  rate: string | null
+  notes: string | null
+  created_at: string
+  updated_at: string
+}
+
+export type InvestmentTxType =
+  | 'contribution'
+  | 'redemption'
+  | 'dividend'
+  | 'interest_on_equity'
+  | 'yield'
+
+export interface InvestmentTransaction {
+  id: string
+  user_id: string
+  investment_id: string
+  type: InvestmentTxType
+  amount: number
+  shares_quantity: number | null
+  unit_price: number | null
+  date: string
+  account_id: string | null
+  notes: string | null
+  created_at: string
+}
+
+export type LiabilityType =
+  | 'loan'
+  | 'financing'
+  | 'debt'
+  | 'tax'
+  | 'other'
+
+export interface Liability {
+  id: string
+  user_id: string
+  name: string
+  type: LiabilityType
+  total_amount: number
+  current_balance: number
+  monthly_payment: number | null
+  remaining_installments: number | null
+  interest_rate_monthly: number | null
+  due_date: string | null
+  notes: string | null
+  created_at: string
+  updated_at: string
 }

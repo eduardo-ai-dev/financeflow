@@ -28,3 +28,4 @@ export const realEstatePropertySchema = z.object({
 })
 
 export type RealEstatePropertyFormData = z.infer<typeof realEstatePropertySchema>
+

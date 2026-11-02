@@ -16,3 +16,4 @@ export const projectSchema = z.object({
 })
 
 export type ProjectFormData = z.infer<typeof projectSchema>
+

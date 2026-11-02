@@ -207,3 +207,4 @@ export async function addAmortization(
   if (error) throw error
   return created as RealEstateAmortization
 }
+
