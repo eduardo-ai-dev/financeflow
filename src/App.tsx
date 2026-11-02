@@ -21,9 +21,10 @@ import { RegisterPage } from '@/pages/auth/register-page'
 import { ForgotPasswordPage } from '@/pages/auth/forgot-password-page'
 import { ResetPasswordPage } from '@/pages/auth/reset-password-page'
 
-// Módulos com carregamento lazy sob demanda
+// Módulos com carregamento sob demanda
 const DashboardPage = lazy(() => import('@/pages/dashboard-page'))
 const ResumoPage = lazy(() => import('@/pages/resumo-page'))
+const CalendarioPage = lazy(() => import('@/pages/calendario-page'))
 const ContasPage = lazy(() => import('@/pages/contas-page'))
 const EntradasPage = lazy(() => import('@/pages/entradas-page'))
 const SaidasPage = lazy(() => import('@/pages/saidas-page'))
@@ -45,44 +46,45 @@ function App() {
       <BrowserRouter>
         <AuthProvider>
           <Routes>
-          {/* Rotas Públicas de Autenticação */}
-          <Route element={<PublicRoute />}>
-            <Route element={<AuthLayout />}>
-              <Route path="/login" element={<LoginPage />} />
-              <Route path="/register" element={<RegisterPage />} />
-              <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-              <Route path="/reset-password" element={<ResetPasswordPage />} />
+            {/* Rotas Públicas de Autenticação */}
+            <Route element={<PublicRoute />}>
+              <Route element={<AuthLayout />}>
+                <Route path="/login" element={<LoginPage />} />
+                <Route path="/register" element={<RegisterPage />} />
+                <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+                <Route path="/reset-password" element={<ResetPasswordPage />} />
+              </Route>
             </Route>
-          </Route>
 
-          {/* Rotas Protegidas dentro do AppLayout com os 15 módulos */}
-          <Route element={<ProtectedRoute />}>
-            <Route element={<AppLayout />}>
-              <Route path="/" element={<DashboardPage />} />
-              <Route path="/resumo" element={<ResumoPage />} />
-              <Route path="/contas" element={<ContasPage />} />
-              <Route path="/entradas" element={<EntradasPage />} />
-              <Route path="/saidas" element={<SaidasPage />} />
-              <Route path="/categorias" element={<CategoriasPage />} />
-              <Route path="/cartoes" element={<CartoesPage />} />
-              <Route path="/parcelamentos" element={<ParcelamentosPage />} />
-              <Route path="/projetos" element={<ProjetosPage />} />
-              <Route path="/imoveis" element={<ImoveisPage />} />
-              <Route path="/metas" element={<MetasPage />} />
-              <Route path="/investimentos" element={<InvestimentosPage />} />
-              <Route path="/patrimonio" element={<PatrimonioPage />} />
-              <Route path="/planejamento" element={<PlanejamentoPage />} />
-              <Route path="/relatorios" element={<RelatoriosPage />} />
-              <Route path="/configuracoes" element={<ConfiguracoesPage />} />
+            {/* Rotas Protegidas dentro do AppLayout */}
+            <Route element={<ProtectedRoute />}>
+              <Route element={<AppLayout />}>
+                <Route path="/" element={<DashboardPage />} />
+                <Route path="/resumo" element={<ResumoPage />} />
+                <Route path="/calendario" element={<CalendarioPage />} />
+                <Route path="/contas" element={<ContasPage />} />
+                <Route path="/entradas" element={<EntradasPage />} />
+                <Route path="/saidas" element={<SaidasPage />} />
+                <Route path="/categorias" element={<CategoriasPage />} />
+                <Route path="/cartoes" element={<CartoesPage />} />
+                <Route path="/parcelamentos" element={<ParcelamentosPage />} />
+                <Route path="/projetos" element={<ProjetosPage />} />
+                <Route path="/imoveis" element={<ImoveisPage />} />
+                <Route path="/metas" element={<MetasPage />} />
+                <Route path="/investimentos" element={<InvestimentosPage />} />
+                <Route path="/patrimonio" element={<PatrimonioPage />} />
+                <Route path="/planejamento" element={<PlanejamentoPage />} />
+                <Route path="/relatorios" element={<RelatoriosPage />} />
+                <Route path="/configuracoes" element={<ConfiguracoesPage />} />
+              </Route>
             </Route>
-          </Route>
 
-          {/* Fallback para rotas desconhecidas */}
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </AuthProvider>
-    </BrowserRouter>
-  </QueryClientProvider>
+            {/* Fallback para rotas desconhecidas */}
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </AuthProvider>
+      </BrowserRouter>
+    </QueryClientProvider>
   )
 }
 

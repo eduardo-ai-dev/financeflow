@@ -19,7 +19,10 @@ export function isIncludedInCardLimit(notes: string | null | undefined): boolean
 
 export function cleanUserNotes(notes: string | null | undefined): string | null {
   if (!notes) return null
-  const cleaned = notes.replace(CARD_LIMIT_INCLUDED_MARKER, '').trim()
+  const cleaned = notes
+    .replace(CARD_LIMIT_INCLUDED_MARKER, '')
+    .replace(/\[ANEXO:[^\]]+\]/g, '')
+    .trim()
   return cleaned || null
 }
 

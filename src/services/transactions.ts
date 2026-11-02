@@ -1,8 +1,14 @@
+import { z } from 'zod'
 import { supabase } from '@/lib/supabase'
 import { getTodayDateString } from '@/lib/date'
 import type { Transaction, Account, Category } from '@/types/database'
 import type { TransactionFormData } from '@/lib/validations/transaction'
 import { cleanUserNotes } from '@/lib/validations/installment'
+import {
+  extractAttachmentFromNotes,
+  encodeTransactionNotesWithAttachment,
+  type AttachmentMeta,
+} from '@/lib/validations/attachment'
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/
@@ -19,9 +25,23 @@ export function sanitizeSearchTerm(raw: string): string {
 }
 
 export interface TransactionWithDetails extends Transaction {
+  attachment?: AttachmentMeta | null
   account?: Account | null
   to_account?: Account | null
   category?: Category | null
+}
+
+export interface BulkImportTransactionInput {
+  kind: 'income' | 'expense'
+  status: 'completed' | 'pending'
+  description: string
+  amount: number
+  account_id: string
+  category_id?: string | null
+  expense_classification?: 'fixed' | 'variable' | 'occasional' | 'extraordinary' | null
+  due_date: string
+  paid_date?: string | null
+  notes?: string | null
 }
 
 export interface TransactionFilters {
@@ -97,6 +117,7 @@ export async function fetchTransactions(
 
   return ((txRes.data || []) as Transaction[]).map((tx) => ({
     ...tx,
+    attachment: extractAttachmentFromNotes(tx.notes),
     notes: cleanUserNotes(tx.notes),
     account: tx.account_id ? accountsMap.get(tx.account_id) ?? null : null,
     to_account: tx.to_account_id ? accountsMap.get(tx.to_account_id) ?? null : null,
@@ -109,7 +130,9 @@ export async function createTransaction(data: TransactionFormData): Promise<Tran
   const isExpense = data.kind === 'expense'
   const isCompleted = data.status === 'completed'
 
-  // Nota (Regra 5): user_id NUNCA é enviado pelo cliente; é preenchido no banco via JWT (auth.uid())
+  // user_id nunca é enviado pelo cliente; é preenchido no banco via JWT (auth.uid())
+  const encodedNotes = encodeTransactionNotesWithAttachment(data.notes, data.attachment)
+
   const basePayload = {
     kind: data.kind,
     status: data.status,
@@ -120,7 +143,7 @@ export async function createTransaction(data: TransactionFormData): Promise<Tran
     category_id: isTransfer ? null : data.category_id || null,
     due_date: data.due_date,
     paid_date: isCompleted ? data.paid_date || data.due_date : null,
-    notes: data.notes?.trim() || null,
+    notes: encodedNotes,
   }
 
   const payloadWithClassification = {
@@ -167,7 +190,9 @@ export async function updateTransaction(
   if (data.amount !== undefined) payload.amount = data.amount
   if (data.account_id !== undefined) payload.account_id = data.account_id
   if (data.due_date !== undefined) payload.due_date = data.due_date
-  if (data.notes !== undefined) payload.notes = data.notes?.trim() || null
+  if (data.notes !== undefined || data.attachment !== undefined) {
+    payload.notes = encodeTransactionNotesWithAttachment(data.notes, data.attachment)
+  }
 
   if (data.kind !== undefined) {
     payload.kind = data.kind
@@ -264,4 +289,86 @@ export async function markTransactionPending(id: string): Promise<Transaction> {
 export async function deleteTransaction(id: string): Promise<void> {
   const { error } = await supabase.from('transactions').delete().eq('id', id)
   if (error) throw error
+}
+
+const bulkImportItemSchema = z.object({
+  kind: z.enum(['income', 'expense'] as const),
+  status: z.enum(['completed', 'pending'] as const),
+  description: z.string().trim().min(1).max(200),
+  amount: z.number().positive().max(1_000_000_000),
+  account_id: z.string().uuid(),
+  category_id: z.string().uuid().nullable().optional(),
+  expense_classification: z
+    .enum(['fixed', 'variable', 'occasional', 'extraordinary'] as const)
+    .nullable()
+    .optional(),
+  due_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  paid_date: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .nullable()
+    .optional(),
+  notes: z.string().max(500).nullable().optional(),
+})
+
+export async function importTransactionsBatch(
+  rows: BulkImportTransactionInput[]
+): Promise<number> {
+  if (!Array.isArray(rows) || rows.length === 0) return 0
+  if (rows.length > 500) {
+    throw new Error('O limite máximo por importação é de 500 lançamentos por vez.')
+  }
+
+  const validatedRows = z.array(bulkImportItemSchema).parse(rows)
+
+  const CHUNK_SIZE = 150
+  let totalImported = 0
+
+  for (let i = 0; i < validatedRows.length; i += CHUNK_SIZE) {
+    const chunk = validatedRows.slice(i, i + CHUNK_SIZE)
+    const payloadsWithClassification = chunk.map((r) => ({
+      kind: r.kind,
+      status: r.status,
+      description: r.description,
+      amount: r.amount,
+      account_id: r.account_id,
+      to_account_id: null,
+      category_id: r.category_id || null,
+      due_date: r.due_date,
+      paid_date: r.status === 'completed' ? r.paid_date || r.due_date : null,
+      notes: r.notes?.trim() || null,
+      ...(r.kind === 'expense'
+        ? { expense_classification: r.expense_classification || 'variable' }
+        : {}),
+    }))
+
+    const { error } = await supabase.from('transactions').insert(payloadsWithClassification)
+
+    if (error) {
+      if (error.message?.includes('expense_classification')) {
+        const fallbackPayloads = chunk.map((r) => ({
+          kind: r.kind,
+          status: r.status,
+          description: r.description,
+          amount: r.amount,
+          account_id: r.account_id,
+          to_account_id: null,
+          category_id: r.category_id || null,
+          due_date: r.due_date,
+          paid_date: r.status === 'completed' ? r.paid_date || r.due_date : null,
+          notes: r.notes?.trim() || null,
+        }))
+        const { error: fallbackError } = await supabase
+          .from('transactions')
+          .insert(fallbackPayloads)
+        if (fallbackError) throw fallbackError
+      } else {
+        throw error
+      }
+    }
+
+    totalImported += chunk.length
+  }
+
+  return totalImported
 }

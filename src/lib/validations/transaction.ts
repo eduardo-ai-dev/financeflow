@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { attachmentMetaSchema } from '@/lib/validations/attachment'
 
 export const expenseClassifications = [
   {
@@ -47,6 +48,7 @@ export const transactionSchema = z
       .nullable()
       .optional(),
     notes: z.string().max(2000, 'Máximo de 2000 caracteres').optional().nullable(),
+    attachment: attachmentMetaSchema.nullable().optional(),
   })
   .refine(
     (data) => {

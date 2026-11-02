@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom'
 import { getModuleByPath } from '@/config/modules'
 import { useAuth } from '@/hooks/use-auth'
 import { ThemeToggle } from '@/components/theme-toggle'
+import { AlertsCenter } from '@/components/alerts-center'
 import { TransactionDialog } from '@/components/transaction-dialog'
 import { Button } from '@/components/ui/button'
 import { Menu, LogOut, Plus } from 'lucide-react'
@@ -59,6 +60,8 @@ export function Header({ onOpenMobileSidebar }: HeaderProps) {
           <span className="hidden sm:inline">Novo Lançamento</span>
           <span className="sm:hidden">Novo</span>
         </Button>
+
+        <AlertsCenter />
 
         <ThemeToggle />
 

@@ -6,6 +6,8 @@ import {
   markTransactionCompleted,
   markTransactionPending,
   deleteTransaction as deleteTransactionService,
+  importTransactionsBatch as importTransactionsBatchService,
+  type BulkImportTransactionInput,
   type TransactionFilters,
   type TransactionWithDetails,
 } from '@/services/transactions'
@@ -72,6 +74,13 @@ export function useTransactions(filters: TransactionFilters = {}) {
     },
   })
 
+  const importBatchMutation = useMutation({
+    mutationFn: (rows: BulkImportTransactionInput[]) => importTransactionsBatchService(rows),
+    onSuccess: () => {
+      invalidateAllFinancialData()
+    },
+  })
+
   return {
     transactions,
     isLoading,
@@ -87,6 +96,8 @@ export function useTransactions(filters: TransactionFilters = {}) {
     isPendingAction: pendingMutation.isPending,
     deleteTransaction: deleteMutation.mutateAsync,
     isDeleting: deleteMutation.isPending,
+    importBatch: importBatchMutation.mutateAsync,
+    isImportingBatch: importBatchMutation.isPending,
   }
 }
 

@@ -2,6 +2,7 @@ import type { LucideIcon } from 'lucide-react'
 import {
   LayoutDashboard,
   BarChart3,
+  CalendarDays,
   Landmark,
   ArrowDownLeft,
   ArrowUpRight,
@@ -51,6 +52,14 @@ export const MODULE_GROUPS: ModuleGroup[] = [
         icon: BarChart3,
         description: 'Análise detalhada do fluxo de caixa mensal (receitas vs. despesas).',
         phase: 2,
+      },
+      {
+        id: 'calendario',
+        title: 'Calendário',
+        path: '/calendario',
+        icon: CalendarDays,
+        description: 'Visão mensal de vencimentos de contas, faturas de cartão e recebimentos.',
+        phase: 8,
       },
     ],
   },
@@ -196,4 +205,3 @@ export function getModuleByPath(path: string): ModuleItem | undefined {
   }
   return ALL_MODULES.find((m) => m.path !== '/' && path.startsWith(m.path))
 }
-

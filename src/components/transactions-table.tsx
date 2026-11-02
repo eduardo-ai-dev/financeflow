@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import type { TransactionWithDetails } from '@/services/transactions'
+import { createReceiptSignedUrl } from '@/services/attachments'
 import { formatBRL } from '@/lib/money'
 import { formatDate, getTodayDateString } from '@/lib/date'
 import { getCategoryIcon } from '@/lib/icons'
@@ -20,6 +21,8 @@ import {
   Trash2,
   Undo2,
   ArrowRightLeft,
+  Paperclip,
+  Loader2,
 } from 'lucide-react'
 
 const CLASSIFICATION_LABELS: Record<string, string> = {
@@ -47,6 +50,20 @@ export function TransactionsTable({
   onToggleStatus,
 }: TransactionsTableProps) {
   const [todayStr] = useState(() => getTodayDateString())
+  const [openingReceiptId, setOpeningReceiptId] = useState<string | null>(null)
+
+  async function handleOpenReceipt(tx: TransactionWithDetails) {
+    if (!tx.attachment?.path) return
+    setOpeningReceiptId(tx.id)
+    try {
+      const signedUrl = await createReceiptSignedUrl(tx.attachment.path)
+      window.open(signedUrl, '_blank', 'noopener,noreferrer')
+    } catch {
+      // Silencioso caso bloqueado; usuário pode abrir via Editar
+    } finally {
+      setOpeningReceiptId(null)
+    }
+  }
 
   if (isLoading) {
     return (
@@ -151,6 +168,22 @@ export function TransactionsTable({
                           {classificationLabel}
                         </span>
                       )}
+                      {tx.attachment && (
+                        <button
+                          type="button"
+                          onClick={() => handleOpenReceipt(tx)}
+                          disabled={openingReceiptId === tx.id}
+                          title={`Abrir comprovante: ${tx.attachment.name}`}
+                          className="inline-flex items-center gap-1 rounded-md border border-primary/25 bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold text-primary hover:bg-primary/20 transition-colors shrink-0 cursor-pointer"
+                        >
+                          {openingReceiptId === tx.id ? (
+                            <Loader2 className="size-3 animate-spin" />
+                          ) : (
+                            <Paperclip className="size-3" />
+                          )}
+                          <span>Comprovante</span>
+                        </button>
+                      )}
                     </div>
                     {tx.notes && (
                       <p className="text-[11px] text-muted-foreground truncate">{tx.notes}</p>
@@ -243,6 +276,12 @@ export function TransactionsTable({
                           <Edit2 className="size-4 mr-2" />
                           Editar Lançamento
                         </DropdownMenuItem>
+                        {tx.attachment && (
+                          <DropdownMenuItem onClick={() => handleOpenReceipt(tx)}>
+                            <Paperclip className="size-4 mr-2 text-primary" />
+                            Abrir Comprovante
+                          </DropdownMenuItem>
+                        )}
                         <DropdownMenuItem
                           onClick={() => onDelete?.(tx.id)}
                           className="text-destructive focus:text-destructive"
@@ -284,6 +323,17 @@ export function TransactionsTable({
                       <span className="inline-flex items-center rounded-md bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
                         {classificationLabel}
                       </span>
+                    )}
+                    {tx.attachment && (
+                      <button
+                        type="button"
+                        onClick={() => handleOpenReceipt(tx)}
+                        disabled={openingReceiptId === tx.id}
+                        className="inline-flex items-center gap-1 rounded-md border border-primary/25 bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold text-primary cursor-pointer"
+                      >
+                        <Paperclip className="size-2.5" />
+                        Recibo
+                      </button>
                     )}
                   </div>
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -356,6 +406,12 @@ export function TransactionsTable({
                         <Edit2 className="size-4 mr-2" />
                         Editar
                       </DropdownMenuItem>
+                      {tx.attachment && (
+                        <DropdownMenuItem onClick={() => handleOpenReceipt(tx)}>
+                          <Paperclip className="size-4 mr-2 text-primary" />
+                          Abrir Comprovante
+                        </DropdownMenuItem>
+                      )}
                       <DropdownMenuItem
                         onClick={() => onDelete?.(tx.id)}
                         className="text-destructive focus:text-destructive"

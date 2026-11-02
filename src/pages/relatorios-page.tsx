@@ -1,15 +1,22 @@
 import { useState, useMemo } from 'react'
+import { Link } from 'react-router-dom'
+import { useAuth } from '@/hooks/use-auth'
 import { useTransactions } from '@/hooks/use-transactions'
 import { useCategories } from '@/hooks/use-categories'
 import { useCards } from '@/hooks/use-cards'
 import { useProperties } from '@/hooks/use-properties'
+import { CsvImportDialog } from '@/components/csv-import-dialog'
+import { exportFinancialReportPdf } from '@/lib/pdf-export'
 import { formatBRL } from '@/lib/money'
-import { getTodayDateString } from '@/lib/date'
+import { formatMonthYear, getTodayDateString } from '@/lib/date'
 import { Button } from '@/components/ui/button'
 import {
   FileSpreadsheet,
+  FileText,
+  Upload,
   Download,
   Calendar,
+  CalendarDays,
   CheckCircle2,
   Clock,
   CreditCard,
@@ -18,11 +25,13 @@ import {
 } from 'lucide-react'
 
 export default function RelatoriosPage() {
+  const { profile } = useAuth()
   const { transactions } = useTransactions()
   const { categories } = useCategories()
   const { cards } = useCards()
   const { properties } = useProperties()
 
+  const [csvImportOpen, setCsvImportOpen] = useState(false)
   const [todayStr] = useState(() => getTodayDateString())
   const [selectedMonth, setSelectedMonth] = useState<string>(() => {
     const d = new Date()
@@ -233,6 +242,45 @@ export default function RelatoriosPage() {
     URL.revokeObjectURL(url)
   }
 
+  function handleExportPDF() {
+    const periodLabel = formatMonthYear(`${selectedMonth}-01`, selectedMonth)
+    const monthTransactions = transactions
+      .filter(
+        (t) =>
+          t.status !== 'canceled' &&
+          (t.paid_date || t.due_date).substring(0, 7) === selectedMonth
+      )
+      .map((t) => ({
+        due_date: t.due_date,
+        description: t.description,
+        kindLabel:
+          t.kind === 'income'
+            ? 'Receita'
+            : t.kind === 'expense'
+            ? 'Despesa'
+            : t.kind === 'card_purchase'
+            ? 'Compra Cartão'
+            : t.kind === 'transfer'
+            ? 'Transferência'
+            : t.kind === 'investment_contribution'
+            ? 'Aporte'
+            : t.kind === 'investment_redemption'
+            ? 'Resgate'
+            : 'Fatura',
+        statusLabel: t.status === 'completed' ? 'Efetivado' : 'Pendente',
+        amount: Number(t.amount),
+        isIncome: t.kind === 'income' || t.kind === 'investment_redemption',
+      }))
+
+    exportFinancialReportPdf({
+      periodLabel,
+      userName: profile?.full_name,
+      dre,
+      upcomingBills,
+      monthTransactions,
+    })
+  }
+
   return (
     <div className="space-y-8 animate-in fade-in-50 duration-200">
       {/* Top Header */}
@@ -246,8 +294,8 @@ export default function RelatoriosPage() {
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center gap-2 mr-1">
             <span className="text-xs text-muted-foreground font-medium">Mês:</span>
             <input
               type="month"
@@ -256,9 +304,27 @@ export default function RelatoriosPage() {
               className="flex h-9 rounded-md border border-input bg-background text-foreground px-3 py-1 text-sm shadow-2xs"
             />
           </div>
-          <Button onClick={handleExportCSV} size="sm" className="gap-2 text-xs">
-            <Download className="h-4 w-4" />
-            Exportar CSV Excel
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setCsvImportOpen(true)}
+            className="gap-1.5 text-xs"
+          >
+            <Upload className="h-3.5 w-3.5 text-primary" />
+            Importar CSV
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleExportCSV}
+            className="gap-1.5 text-xs"
+          >
+            <Download className="h-3.5 w-3.5" />
+            Exportar CSV
+          </Button>
+          <Button onClick={handleExportPDF} size="sm" className="gap-1.5 text-xs">
+            <FileText className="h-3.5 w-3.5" />
+            Exportar PDF
           </Button>
         </div>
       </div>
@@ -382,10 +448,18 @@ export default function RelatoriosPage() {
               </p>
             </div>
           </div>
-          <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400">
-            {upcomingBills.length} compromisso{upcomingBills.length !== 1 ? 's' : ''} mapeado
-            {upcomingBills.length !== 1 ? 's' : ''}
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400">
+              {upcomingBills.length} compromisso{upcomingBills.length !== 1 ? 's' : ''} mapeado
+              {upcomingBills.length !== 1 ? 's' : ''}
+            </span>
+            <Link to="/calendario">
+              <Button variant="outline" size="sm" className="h-8 text-xs gap-1.5">
+                <CalendarDays className="h-3.5 w-3.5 text-primary" />
+                Abrir Calendário
+              </Button>
+            </Link>
+          </div>
         </div>
 
         {upcomingBills.length === 0 ? (
@@ -429,6 +503,8 @@ export default function RelatoriosPage() {
           </div>
         )}
       </div>
+
+      <CsvImportDialog open={csvImportOpen} onOpenChange={setCsvImportOpen} />
     </div>
   )
 }

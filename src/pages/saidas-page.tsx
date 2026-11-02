@@ -4,6 +4,7 @@ import { useAccounts } from '@/hooks/use-accounts'
 import { useCategories } from '@/hooks/use-categories'
 import { TransactionsTable } from '@/components/transactions-table'
 import { TransactionDialog } from '@/components/transaction-dialog'
+import { CsvImportDialog } from '@/components/csv-import-dialog'
 import { EmptyState } from '@/components/empty-state'
 import { formatBRL } from '@/lib/money'
 import { getTodayDateString } from '@/lib/date'
@@ -18,6 +19,7 @@ import {
   Clock,
   Receipt,
   AlertTriangle,
+  Upload,
 } from 'lucide-react'
 
 export default function SaidasPage() {
@@ -38,6 +40,7 @@ export default function SaidasPage() {
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>('all')
 
   const [dialogOpen, setDialogOpen] = useState(false)
+  const [csvImportOpen, setCsvImportOpen] = useState(false)
   const [transactionToEdit, setTransactionToEdit] = useState<TransactionWithDetails | null>(null)
 
   const expenseCategories = useMemo(() => categoryTree('expense'), [categoryTree])
@@ -121,10 +124,21 @@ export default function SaidasPage() {
           </p>
         </div>
 
-        <Button onClick={handleCreate} size="sm" className="text-xs">
-          <Plus className="size-4 mr-1.5" />
-          Nova Despesa
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setCsvImportOpen(true)}
+            className="text-xs gap-1.5"
+          >
+            <Upload className="size-3.5 text-primary" />
+            Importar CSV
+          </Button>
+          <Button onClick={handleCreate} size="sm" className="text-xs">
+            <Plus className="size-4 mr-1.5" />
+            Nova Despesa
+          </Button>
+        </div>
       </div>
 
       {/* KPI Cards */}
@@ -309,6 +323,12 @@ export default function SaidasPage() {
         onOpenChange={setDialogOpen}
         transactionToEdit={transactionToEdit}
         initialKind="expense"
+      />
+
+      <CsvImportDialog
+        open={csvImportOpen}
+        onOpenChange={setCsvImportOpen}
+        defaultAccountId={selectedAccountId !== 'all' ? selectedAccountId : undefined}
       />
     </div>
   )

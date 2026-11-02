@@ -5,6 +5,7 @@ import { useDashboardMetrics } from '@/hooks/use-dashboard-metrics'
 import { usePatrimony } from '@/hooks/use-patrimony'
 import { useTransactions } from '@/hooks/use-transactions'
 import { useCards } from '@/hooks/use-cards'
+import { useAlerts } from '@/hooks/use-alerts'
 import { KpiCard } from '@/components/kpi-card'
 import { TransactionDialog } from '@/components/transaction-dialog'
 import { formatBRL } from '@/lib/money'
@@ -24,6 +25,9 @@ import {
   ArrowRight,
   Clock,
   CheckCircle2,
+  Bell,
+  CalendarDays,
+  AlertTriangle,
 } from 'lucide-react'
 
 export default function DashboardPage() {
@@ -32,6 +36,7 @@ export default function DashboardPage() {
   const { summary: patrimonySummary, isLoading: isLoadingPatrimony } = usePatrimony()
   const { transactions, isLoading: isLoadingTx } = useTransactions()
   const { cards, isLoading: isLoadingCards } = useCards()
+  const { activeAlerts } = useAlerts()
 
   const [txDialogOpen, setTxDialogOpen] = useState(false)
   const [txInitialKind, setTxInitialKind] = useState<'income' | 'expense'>('expense')
@@ -95,6 +100,13 @@ export default function DashboardPage() {
             + Despesa
           </Button>
 
+          <Link to="/calendario">
+            <Button variant="outline" size="sm" className="text-xs font-medium">
+              <CalendarDays className="size-3.5 mr-1.5 text-primary" />
+              Calendário
+            </Button>
+          </Link>
+
           <Button
             variant="outline"
             size="sm"
@@ -108,6 +120,81 @@ export default function DashboardPage() {
           </Button>
         </div>
       </div>
+
+      {/* Central Executiva de Alertas (quando houver notificações ativas) */}
+      {activeAlerts.length > 0 && (
+        <section
+          aria-label="Alertas Financeiros"
+          className="rounded-2xl border border-amber-500/25 bg-card p-4 sm:p-5 shadow-2xs space-y-3"
+        >
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <div className="flex size-8 items-center justify-center rounded-xl bg-amber-500/15 text-amber-500">
+                <Bell className="size-4" />
+              </div>
+              <div>
+                <h2 className="text-sm font-bold tracking-tight text-foreground">
+                  Central de Atenção ({activeAlerts.length})
+                </h2>
+                <p className="text-xs text-muted-foreground">
+                  Vencimentos próximos, cartões e metas que merecem acompanhamento
+                </p>
+              </div>
+            </div>
+
+            <Link to="/calendario">
+              <Button variant="ghost" size="sm" className="h-8 text-xs">
+                Ver agenda mensal <ArrowRight className="size-3.5 ml-1" />
+              </Button>
+            </Link>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            {activeAlerts.slice(0, 3).map((alert) => {
+              const isCritical = alert.severity === 'critical'
+              return (
+                <Link
+                  key={alert.id}
+                  to={alert.actionPath}
+                  className={`group rounded-xl border p-3 transition-colors flex flex-col justify-between gap-2 ${
+                    isCritical
+                      ? 'border-rose-500/30 bg-rose-500/[0.04] hover:bg-rose-500/[0.08]'
+                      : 'border-border bg-muted/20 hover:bg-muted/40'
+                  }`}
+                >
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-xs font-semibold text-foreground line-clamp-1 group-hover:text-primary transition-colors">
+                        {alert.title}
+                      </span>
+                      {isCritical && (
+                        <AlertTriangle className="size-3.5 text-rose-500 shrink-0" />
+                      )}
+                    </div>
+                    <p className="text-[11px] text-muted-foreground line-clamp-2">
+                      {alert.description}
+                    </p>
+                  </div>
+
+                  <div className="flex items-center justify-between text-xs pt-1">
+                    {alert.amount !== undefined ? (
+                      <span className="font-bold tabular text-foreground">
+                        {formatBRL(alert.amount)}
+                      </span>
+                    ) : (
+                      <span />
+                    )}
+                    <span className="text-[11px] font-semibold text-primary inline-flex items-center gap-0.5">
+                      {alert.actionLabel}
+                      <ArrowRight className="size-3" />
+                    </span>
+                  </div>
+                </Link>
+              )
+            })}
+          </div>
+        </section>
+      )}
 
       {/* Grid de KPI Cards */}
       <section aria-label="Métricas Principais">

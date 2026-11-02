@@ -3,6 +3,7 @@ import { useAuth } from '@/hooks/use-auth'
 import { useTheme } from '@/hooks/use-theme'
 import { supabase } from '@/lib/supabase'
 import { getTodayDateString } from '@/lib/date'
+import { CsvImportDialog } from '@/components/csv-import-dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -12,6 +13,7 @@ import {
   Sun,
   Moon,
   Download,
+  Upload,
   LogOut,
   AlertTriangle,
   Loader2,
@@ -23,6 +25,7 @@ export default function ConfiguracoesPage() {
 
   const [isExporting, setIsExporting] = useState(false)
   const [exportMessage, setExportMessage] = useState<string | null>(null)
+  const [csvImportOpen, setCsvImportOpen] = useState(false)
 
   async function handleExportFullBackup() {
     try {
@@ -216,6 +219,24 @@ export default function ConfiguracoesPage() {
             )}
           </Button>
         </div>
+
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-muted/20 p-4 rounded-xl">
+          <div>
+            <h4 className="font-medium text-sm">Importar Extrato Bancário (CSV)</h4>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Carregue planilhas ou extratos bancários em formato CSV para registrar movimentações em lote.
+            </p>
+          </div>
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setCsvImportOpen(true)}
+            className="gap-2 shrink-0 text-xs"
+          >
+            <Upload className="size-4 text-primary" /> Importar Extrato CSV
+          </Button>
+        </div>
       </div>
 
       {/* Encerramento de Sessão */}
@@ -237,6 +258,8 @@ export default function ConfiguracoesPage() {
           <LogOut className="size-4" /> Sair da Conta
         </Button>
       </div>
+
+      <CsvImportDialog open={csvImportOpen} onOpenChange={setCsvImportOpen} />
     </div>
   )
 }
