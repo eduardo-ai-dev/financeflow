@@ -176,3 +176,10 @@ Construir o FinanceFlow (README.md) de forma incremental: SPA React + TS + Vite,
 ## Observações do ambiente
 - Node v24 e Git OK. **Docker não instalado** → Supabase local (CLI) inviável; usar **projeto Supabase na nuvem**.
 - PowerShell bloqueia `npm.ps1` → usar sempre `npm.cmd` / `npx.cmd`.
+
+---
+
+## 12. Extras pós-roadmap (Concluídos)
+- [x] **E1** Política de senha forte (mín. 8 caracteres, maiúscula, minúscula, número, símbolo, sem padrões comuns/nome/e-mail) com medidor de nível no cadastro e na redefinição (src/lib/password.ts, password-strength-meter.tsx)
+- [x] **E2** Cartões com limite total, quanto já gastou e quanto tem disponível (campos ligados) — migração `0006_card_initial_usage.sql` aplicada no Supabase
+
