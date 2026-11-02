@@ -49,3 +49,4 @@ export function useInstallments(status?: string) {
 }
 
 export type { InstallmentWithDetails }
+

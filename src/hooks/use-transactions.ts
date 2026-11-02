@@ -88,3 +88,4 @@ export function useTransactions(filters: TransactionFilters = {}) {
 }
 
 export type { TransactionWithDetails }
+

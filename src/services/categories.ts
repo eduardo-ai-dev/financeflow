@@ -207,3 +207,4 @@ export async function seedDefaultCategories(): Promise<void> {
     }
   }
 }
+

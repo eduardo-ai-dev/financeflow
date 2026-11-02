@@ -34,8 +34,8 @@ Construir o FinanceFlow (README.md) de forma incremental: SPA React + TS + Vite,
 ## 3. Roadmap (igual ao README)
 1. **Fundação** (Concluída)
 2. **Contas, categorias, entradas, saídas, transferências** (Concluída)
-3. **Cartões, faturas, recorrências, parcelamentos** (Em andamento / Código pronto)
-4. Projetos + módulo imobiliário (SAC/Price, INCC, amortizações)
+3. **Cartões, faturas, recorrências, parcelamentos** (Concluída e migrada no Supabase)
+4. **Projetos + módulo imobiliário (SAC/Price, INCC, amortizações)** (Concluída / Código pronto)
 5. Metas & Wishlist (conversão em ativo)
 6. Investimentos + balanço patrimonial
 7. Planejamento futuro (sandbox de cenários)
@@ -89,6 +89,27 @@ Construir o FinanceFlow (README.md) de forma incremental: SPA React + TS + Vite,
 
 ## Pronto quando (Fase 3)
 - [x] O usuário cadastra cartões de crédito, acompanha a utilização do limite, visualiza e quita faturas mensais (sem duplicar despesas, respeitando a Regra 3) e gerencia todos os parcelamentos ativos com cronograma de encerramento.
+
+---
+
+## 7. Fase 4 — Projetos Independentes e Gestão Imobiliária (Concluída)
+- [x] **T4.1** Migração SQL `0003_projects_and_real_estate.sql`: tabelas `projects`, `real_estate_properties`, `real_estate_amortizations`, colunas `project_id` e `property_id` em `transactions`, triggers e RLS → Verify: arquivo SQL gerado e validado
+- [x] **T4.2** Motor matemático de amortização imobiliária (`src/lib/mortgage.ts`): simulação exata de SAC, Tabela Price e cálculo de amortização extraordinária (Prazo vs. Parcela) em centavos inteiros → Verify: funções testadas e validadas
+- [x] **T4.3** Esquemas Zod (`project.ts`, `property.ts`, `amortization.ts`) e tipos em `database.ts` → Verify: tipagem estrita
+- [x] **T4.4** Camada de serviços (`projects.ts`, `properties.ts`) e hooks (`useProjects`, `useProperties`) com invalidação de cache reativo → Verify: mutations com refetch
+- [x] **T4.5** Tela de Projetos em `/projetos`: cards com barra de progresso de orçamento, gastos executados, saldo restante, lista de transações vinculadas e modal `ProjectDialog` → Verify: criação e acompanhamento de projetos
+- [x] **T4.6** Tela de Gestão Imobiliária em `/imoveis`:
+  - Painel Consolidado: Custo Efetivo Total (CET), Total Desembolsado vs. Saldo Devedor do Financiamento
+  - Aba de Financiamento com tabela cronológica de parcelas (amortização vs. juros)
+  - Simulador interativo em tempo real de Amortização Extraordinária (Prazo vs. Parcela com cálculo da economia de juros)
+  - Aba de Entrada e Evolução de Obra (INCC e custos adicionais)
+  - Histórico de amortizações e modal `AmortizationDialog`
+  - Modal de cadastro e edição `PropertyDialog`
+- [x] **T4.7** Testes unitários no Vitest (`mortgage-and-projects.test.ts`): SAC, Price, Amortização extraordinária e validações → Verify: 50/50 testes aprovados
+- [x] **T4.8** Verificação final da Fase 4: `npm.cmd run lint` (0 erros), `npx.cmd tsc --noEmit` (0 erros) e `npm.cmd run build` (sucesso) → Verify: build de produção concluído com êxito
+
+## Pronto quando (Fase 4)
+- [x] O usuário gerencia projetos isolados com controle orçamentário estrito e controla a complexidade da aquisição imobiliária (entrada, evolução de obra/INCC, financiamento SAC/Price e simulador de amortização com economia de juros).
 
 ## Observações do ambiente
 - Node v24 e Git OK. **Docker não instalado** → Supabase local (CLI) inviável; usar **projeto Supabase na nuvem**.

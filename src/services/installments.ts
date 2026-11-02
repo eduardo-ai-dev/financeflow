@@ -154,3 +154,4 @@ export async function cancelInstallment(id: string): Promise<void> {
 
   if (txError) throw txError
 }
+

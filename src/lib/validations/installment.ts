@@ -20,3 +20,4 @@ export const installmentSchema = z.object({
 })
 
 export type InstallmentFormData = z.infer<typeof installmentSchema>
+

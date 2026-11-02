@@ -78,3 +78,4 @@ export async function toggleArchiveAccount(id: string, is_archived: boolean): Pr
 
   if (error) throw error
 }
+

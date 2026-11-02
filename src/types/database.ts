@@ -108,6 +108,66 @@ export interface CardLimit {
   available_limit: number
 }
 
+export type ProjectStatus = 'planning' | 'in_progress' | 'completed' | 'canceled'
+
+export interface Project {
+  id: string
+  user_id: string
+  name: string
+  description: string | null
+  target_budget: number
+  start_date: string | null
+  end_date: string | null
+  status: ProjectStatus
+  color: string | null
+  icon: string | null
+  created_at: string
+  updated_at: string
+}
+
+export type PropertyStatus = 'planning' | 'under_construction' | 'ready' | 'delivered'
+export type AmortizationSystem = 'sac' | 'price'
+
+export interface RealEstateProperty {
+  id: string
+  user_id: string
+  name: string
+  builder: string | null
+  unit: string | null
+  contract_value: number
+  current_market_value: number | null
+  purchase_date: string
+  keys_delivery_date: string | null
+  status: PropertyStatus
+  down_payment_total: number
+  down_payment_paid: number
+  financed_amount: number
+  bank: string | null
+  amortization_system: AmortizationSystem
+  annual_interest_rate: number
+  total_term_months: number
+  paid_months: number
+  construction_index: string
+  construction_fees_paid: number
+  additional_costs_paid: number
+  notes: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface RealEstateAmortization {
+  id: string
+  user_id: string
+  property_id: string
+  amount: number
+  date: string
+  reduction_type: 'term' | 'installment'
+  interest_saved: number | null
+  term_reduced: number | null
+  notes: string | null
+  created_at: string
+}
+
 export type TransactionKind =
   | 'income'
   | 'expense'
@@ -133,6 +193,8 @@ export interface Transaction {
   invoice_id?: string | null
   installment_id?: string | null
   installment_number?: number | null
+  project_id?: string | null
+  property_id?: string | null
   due_date: string
   paid_date: string | null
   notes: string | null

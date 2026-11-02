@@ -59,3 +59,4 @@ export function getCategoryIcon(name?: string | null): LucideIcon {
   if (!name || !ICON_MAP[name]) return Tag
   return ICON_MAP[name]
 }
+

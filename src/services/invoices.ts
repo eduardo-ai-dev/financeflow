@@ -128,3 +128,4 @@ export async function payInvoice(
 
   return paymentTx as Transaction
 }
+

@@ -264,3 +264,4 @@ create policy installments_update_own on public.installments
   using (user_id = (select auth.uid())) with check (user_id = (select auth.uid()));
 create policy installments_delete_own on public.installments
   for delete to authenticated using (user_id = (select auth.uid()));
+

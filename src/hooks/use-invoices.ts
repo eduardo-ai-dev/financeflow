@@ -46,3 +46,4 @@ export function useInvoices(cardId?: string) {
 }
 
 export type { InvoiceWithTotals }
+

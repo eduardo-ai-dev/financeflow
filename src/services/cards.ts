@@ -96,3 +96,4 @@ export async function deleteCreditCard(id: string): Promise<void> {
   const { error } = await supabase.from('credit_cards').delete().eq('id', id)
   if (error) throw error
 }
+
