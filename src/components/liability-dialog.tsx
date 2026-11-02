@@ -235,3 +235,4 @@ export function LiabilityDialog({ open, onOpenChange, liabilityToEdit }: Liabili
     </Dialog>
   )
 }
+

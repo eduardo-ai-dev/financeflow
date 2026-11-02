@@ -88,12 +88,35 @@ describe('Motor de Cartões de Crédito e Parcelamentos (Fase 3)', () => {
         institution: 'Nubank',
         brand: 'mastercard',
         limit_amount: 15000,
+        initial_used_amount: 3500,
         closing_day: 3,
         due_day: 10,
         color: '#7c3aed',
       })
 
       expect(valid.success).toBe(true)
+    })
+
+    it('rejeita gasto informado maior que o limite total ou negativo', () => {
+      const base = {
+        name: 'Inter Gold',
+        brand: 'visa',
+        limit_amount: 2000,
+        closing_day: 5,
+        due_day: 12,
+        color: '#2563eb',
+      }
+
+      expect(creditCardSchema.safeParse({ ...base, initial_used_amount: 2500 }).success).toBe(false)
+      expect(creditCardSchema.safeParse({ ...base, initial_used_amount: -1 }).success).toBe(false)
+      expect(creditCardSchema.safeParse({ ...base, initial_used_amount: 2000 }).success).toBe(true)
+      expect(creditCardSchema.safeParse({ ...base, initial_used_amount: 0 }).success).toBe(true)
+    })
+
+    it('calcula disponível = limite - gasto sem erro de ponto flutuante', () => {
+      const limit = toCents(1500.1)
+      const used = toCents(0.2) + toCents(700.1)
+      expect(fromCents(limit - used)).toBe(799.8)
     })
 
     it('rejeita cartão de crédito com limite negativo ou dia inválido', () => {

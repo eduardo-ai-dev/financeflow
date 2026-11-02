@@ -25,3 +25,4 @@ export const liabilitySchema = z.object({
 })
 
 export type LiabilityFormData = z.infer<typeof liabilitySchema>
+

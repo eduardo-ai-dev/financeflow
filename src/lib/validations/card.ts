@@ -47,6 +47,13 @@ export const creditCardSchema = z.object({
     .string()
     .regex(/^#[0-9a-fA-F]{6}$/, 'Cor inválida'),
   default_account_id: z.string().uuid().nullable().optional(),
+  /** Quanto do limite já foi gasto fora dos lançamentos do app (consome limite, não gera despesa). */
+  initial_used_amount: z
+    .number({ error: 'Informe um valor gasto válido' })
+    .min(0, 'O valor gasto não pode ser negativo'),
+}).refine((data) => data.initial_used_amount <= data.limit_amount, {
+  message: 'O valor gasto não pode ser maior que o limite total',
+  path: ['initial_used_amount'],
 })
 
 export type CreditCardFormData = z.infer<typeof creditCardSchema>

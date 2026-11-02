@@ -1,4 +1,9 @@
 import { z } from 'zod'
+import {
+  buildUserInputs,
+  containsUserInfo,
+  evaluatePasswordStrength,
+} from '@/lib/password'
 
 export const loginSchema = z.object({
   email: z
@@ -13,6 +18,18 @@ export const loginSchema = z.object({
 
 export type LoginFormData = z.infer<typeof loginSchema>
 
+/**
+ * Senha forte obrigatória (cadastro e redefinição): mínimo de 8 caracteres,
+ * maiúscula, minúscula, número, símbolo e sem padrões previsíveis.
+ * O login NÃO usa este schema para não bloquear contas criadas antes da política.
+ */
+export const strongPasswordSchema = z.string().superRefine((value, ctx) => {
+  const failed = evaluatePasswordStrength(value).checks.find((check) => !check.passed)
+  if (failed) {
+    ctx.addIssue({ code: 'custom', message: failed.error })
+  }
+})
+
 export const registerSchema = z
   .object({
     fullName: z
@@ -23,16 +40,26 @@ export const registerSchema = z
       .string()
       .min(1, 'O e-mail é obrigatório')
       .email('Formato de e-mail inválido'),
-    password: z
-      .string()
-      .min(6, 'A senha deve conter no mínimo 6 caracteres'),
+    password: strongPasswordSchema,
     confirmPassword: z
       .string()
       .min(1, 'Confirmação de senha obrigatória'),
   })
-  .refine((data) => data.password === data.confirmPassword, {
-    message: 'As senhas não coincidem',
-    path: ['confirmPassword'],
+  .superRefine((data, ctx) => {
+    if (data.password !== data.confirmPassword) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'As senhas não coincidem',
+        path: ['confirmPassword'],
+      })
+    }
+    if (containsUserInfo(data.password, buildUserInputs(data.fullName, data.email))) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'A senha não pode conter o seu nome ou e-mail',
+        path: ['password'],
+      })
+    }
   })
 
 export type RegisterFormData = z.infer<typeof registerSchema>
@@ -48,9 +75,7 @@ export type ForgotPasswordFormData = z.infer<typeof forgotPasswordSchema>
 
 export const resetPasswordSchema = z
   .object({
-    password: z
-      .string()
-      .min(6, 'A nova senha deve conter no mínimo 6 caracteres'),
+    password: strongPasswordSchema,
     confirmPassword: z
       .string()
       .min(1, 'Confirmação de senha obrigatória'),
@@ -61,4 +86,3 @@ export const resetPasswordSchema = z
   })
 
 export type ResetPasswordFormData = z.infer<typeof resetPasswordSchema>
-

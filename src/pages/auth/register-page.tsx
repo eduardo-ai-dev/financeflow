@@ -1,9 +1,11 @@
 import { useState } from 'react'
-import { useForm } from 'react-hook-form'
+import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/hooks/use-auth'
 import { registerSchema, type RegisterFormData } from '@/lib/validations/auth'
+import { buildUserInputs, evaluatePasswordStrength } from '@/lib/password'
+import { PasswordStrengthMeter } from '@/components/password-strength-meter'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -18,6 +20,7 @@ export function RegisterPage() {
   const {
     register,
     handleSubmit,
+    control,
     formState: { errors, isSubmitting },
   } = useForm<RegisterFormData>({
     resolver: zodResolver(registerSchema),
@@ -28,6 +31,12 @@ export function RegisterPage() {
       confirmPassword: '',
     },
   })
+
+  const passwordValue = useWatch({ control, name: 'password' }) ?? ''
+  const fullNameValue = useWatch({ control, name: 'fullName' }) ?? ''
+  const emailValue = useWatch({ control, name: 'email' }) ?? ''
+  const userInputs = buildUserInputs(fullNameValue, emailValue)
+  const isPasswordStrong = evaluatePasswordStrength(passwordValue, userInputs).isStrong
 
   async function onSubmit(data: RegisterFormData) {
     setServerError(null)
@@ -42,6 +51,8 @@ export function RegisterPage() {
         setServerError('Este e-mail já está cadastrado. Tente entrar.')
       } else if (result.error.message.includes('rate limit')) {
         setServerError('Limite de envio de e-mails atingido temporariamente pelo Supabase. Aguarde alguns minutos ou desative a opção "Confirm email" no painel do Supabase para cadastro imediato.')
+      } else if (result.error.message.toLowerCase().includes('password')) {
+        setServerError('A senha não atende à política de segurança do servidor. Use uma senha forte e tente novamente.')
       } else {
         setServerError(result.error.message || 'Erro ao criar conta.')
       }
@@ -128,11 +139,12 @@ export function RegisterPage() {
           <Input
             id="password"
             type="password"
-            placeholder="Mínimo de 6 caracteres"
+            placeholder="Mínimo de 8 caracteres, forte"
             autoComplete="new-password"
             disabled={isSubmitting}
             {...register('password')}
           />
+          <PasswordStrengthMeter password={passwordValue} userInputs={userInputs} />
           {errors.password && (
             <p className="text-xs text-destructive">{errors.password.message}</p>
           )}
@@ -153,7 +165,11 @@ export function RegisterPage() {
           )}
         </div>
 
-        <Button type="submit" className="w-full mt-2" disabled={isSubmitting}>
+        <Button
+          type="submit"
+          className="w-full mt-2"
+          disabled={isSubmitting || !isPasswordStrong}
+        >
           {isSubmitting ? (
             <>
               <Loader2 className="mr-2 size-4 animate-spin" />
@@ -174,4 +190,3 @@ export function RegisterPage() {
     </div>
   )
 }
-

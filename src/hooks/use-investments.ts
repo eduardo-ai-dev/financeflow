@@ -69,3 +69,4 @@ export function useInvestments(selectedInvestmentId?: string) {
 }
 
 export type { InvestmentWithStats }
+

@@ -58,3 +58,4 @@ export async function deleteAsset(id: string): Promise<void> {
   const { error } = await supabase.from('assets').delete().eq('id', id)
   if (error) throw error
 }
+

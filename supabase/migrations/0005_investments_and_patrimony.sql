@@ -154,3 +154,4 @@ create policy liabilities_update_own on public.liabilities
   using (user_id = (select auth.uid())) with check (user_id = (select auth.uid()));
 create policy liabilities_delete_own on public.liabilities
   for delete to authenticated using (user_id = (select auth.uid()));
+

@@ -71,3 +71,4 @@ export function useGoals() {
 }
 
 export type { GoalWithStats }
+

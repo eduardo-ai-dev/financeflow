@@ -1,9 +1,11 @@
 import { useState } from 'react'
-import { useForm } from 'react-hook-form'
+import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/hooks/use-auth'
 import { resetPasswordSchema, type ResetPasswordFormData } from '@/lib/validations/auth'
+import { evaluatePasswordStrength } from '@/lib/password'
+import { PasswordStrengthMeter } from '@/components/password-strength-meter'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -18,6 +20,7 @@ export function ResetPasswordPage() {
   const {
     register,
     handleSubmit,
+    control,
     formState: { errors, isSubmitting },
   } = useForm<ResetPasswordFormData>({
     resolver: zodResolver(resetPasswordSchema),
@@ -26,6 +29,9 @@ export function ResetPasswordPage() {
       confirmPassword: '',
     },
   })
+
+  const passwordValue = useWatch({ control, name: 'password' }) ?? ''
+  const isPasswordStrong = evaluatePasswordStrength(passwordValue).isStrong
 
   async function onSubmit(data: ResetPasswordFormData) {
     setServerError(null)
@@ -80,11 +86,12 @@ export function ResetPasswordPage() {
           <Input
             id="password"
             type="password"
-            placeholder="Mínimo de 6 caracteres"
+            placeholder="Mínimo de 8 caracteres, forte"
             autoComplete="new-password"
             disabled={isSubmitting}
             {...register('password')}
           />
+          <PasswordStrengthMeter password={passwordValue} />
           {errors.password && (
             <p className="text-xs text-destructive">{errors.password.message}</p>
           )}
@@ -105,7 +112,11 @@ export function ResetPasswordPage() {
           )}
         </div>
 
-        <Button type="submit" className="w-full mt-2" disabled={isSubmitting}>
+        <Button
+          type="submit"
+          className="w-full mt-2"
+          disabled={isSubmitting || !isPasswordStrong}
+        >
           {isSubmitting ? (
             <>
               <Loader2 className="mr-2 size-4 animate-spin" />
@@ -126,4 +137,3 @@ export function ResetPasswordPage() {
     </div>
   )
 }
-

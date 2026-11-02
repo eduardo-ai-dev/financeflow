@@ -9,6 +9,7 @@ import {
 } from '@/lib/validations/card'
 import { useCards, type CreditCardWithLimit } from '@/hooks/use-cards'
 import { useAccounts } from '@/hooks/use-accounts'
+import { formatBRL, fromCents, toCents } from '@/lib/money'
 import {
   Dialog,
   DialogContent,
@@ -20,7 +21,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { AlertCircle, Loader2 } from 'lucide-react'
+import { AlertCircle, Info, Loader2 } from 'lucide-react'
 
 interface CardDialogProps {
   open: boolean
@@ -39,6 +40,7 @@ export function CardDialog({
   const isEditing = !!cardToEdit
 
   const activeAccounts = accounts.filter((a) => !a.is_archived)
+  const firstActiveAccountId = activeAccounts[0]?.id ?? null
 
   const {
     register,
@@ -54,6 +56,7 @@ export function CardDialog({
       institution: '',
       brand: 'mastercard',
       limit_amount: 1000,
+      initial_used_amount: 0,
       closing_day: 1,
       due_day: 10,
       color: '#4f46e5',
@@ -64,6 +67,23 @@ export function CardDialog({
   const selectedColor = useWatch({ control, name: 'color', defaultValue: '#4f46e5' })
   const selectedBrand = useWatch({ control, name: 'brand', defaultValue: 'mastercard' })
   const selectedAccountId = useWatch({ control, name: 'default_account_id' })
+  const limitValue = useWatch({ control, name: 'limit_amount' })
+  const usedValue = useWatch({ control, name: 'initial_used_amount' })
+
+  // Compras já lançadas no app (faturas em aberto) são somadas automaticamente ao gasto informado.
+  const registeredUsedCents = cardToEdit
+    ? Math.max(
+        0,
+        toCents(cardToEdit.used_amount) - toCents(cardToEdit.initial_used_amount ?? 0)
+      )
+    : 0
+
+  const limitCents = Number.isFinite(limitValue) ? toCents(limitValue) : 0
+  const hasUsedValue = Number.isFinite(usedValue)
+  const totalUsedCents = hasUsedValue ? toCents(usedValue) + registeredUsedCents : 0
+  const availableCents = limitCents - totalUsedCents
+  const usagePercent =
+    limitCents > 0 ? Math.min(100, Math.max(0, Math.round((totalUsedCents / limitCents) * 100))) : 0
 
   useEffect(() => {
     if (cardToEdit) {
@@ -72,6 +92,7 @@ export function CardDialog({
         institution: cardToEdit.institution || '',
         brand: cardToEdit.brand,
         limit_amount: Number(cardToEdit.limit_amount),
+        initial_used_amount: Number(cardToEdit.initial_used_amount ?? 0),
         closing_day: cardToEdit.closing_day,
         due_day: cardToEdit.due_day,
         color: cardToEdit.color || '#4f46e5',
@@ -83,19 +104,35 @@ export function CardDialog({
         institution: '',
         brand: 'mastercard',
         limit_amount: 1000,
+        initial_used_amount: 0,
         closing_day: 1,
         due_day: 10,
         color: '#4f46e5',
-        default_account_id: activeAccounts[0]?.id || null,
+        default_account_id: firstActiveAccountId,
       })
     }
-  }, [cardToEdit, reset, open, activeAccounts])
+  }, [cardToEdit, reset, open, firstActiveAccountId])
 
   const handleDialogChange = (nextOpen: boolean) => {
     if (!nextOpen) {
       setServerError(null)
     }
     onOpenChange(nextOpen)
+  }
+
+  // Digitar o disponível recalcula o gasto: gasto = limite - compras lançadas - disponível
+  function handleAvailableChange(raw: string) {
+    if (raw === '') {
+      setValue('initial_used_amount', Number.NaN, { shouldDirty: true })
+      return
+    }
+    const parsed = Number(raw)
+    if (!Number.isFinite(parsed)) return
+    const usedCents = limitCents - registeredUsedCents - toCents(parsed)
+    setValue('initial_used_amount', fromCents(usedCents), {
+      shouldDirty: true,
+      shouldValidate: true,
+    })
   }
 
   async function onSubmit(data: CreditCardFormData) {
@@ -114,6 +151,10 @@ export function CardDialog({
       const msg = err instanceof Error ? err.message : 'Erro ao salvar cartão'
       if (msg.includes('credit_cards_user_name_key')) {
         setServerError('Você já possui um cartão cadastrado com este nome.')
+      } else if (msg.includes('initial_used_amount')) {
+        setServerError(
+          'O banco de dados ainda não possui o campo de gasto do cartão. Execute a migração 0006_card_initial_usage.sql no Supabase.'
+        )
       } else {
         setServerError(msg)
       }
@@ -127,8 +168,8 @@ export function CardDialog({
           <DialogTitle>{isEditing ? 'Editar Cartão' : 'Novo Cartão de Crédito'}</DialogTitle>
           <DialogDescription>
             {isEditing
-              ? 'Altere limite, datas de fechamento ou configurações do cartão.'
-              : 'Cadastre seu cartão para controlar limites, faturas e parcelamentos.'}
+              ? 'Altere limite, gasto, datas de fechamento ou configurações do cartão.'
+              : 'Cadastre quantos cartões quiser, informando o limite e quanto já foi gasto.'}
           </DialogDescription>
         </DialogHeader>
 
@@ -205,6 +246,82 @@ export function CardDialog({
             {errors.limit_amount && (
               <p className="text-xs text-destructive">{errors.limit_amount.message}</p>
             )}
+          </div>
+
+          {/* Gasto e Disponível (campos ligados entre si) */}
+          <div className="space-y-3 rounded-lg border bg-muted/30 p-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="card-used">Quanto já gastou (R$)</Label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-semibold text-muted-foreground">
+                    R$
+                  </span>
+                  <Input
+                    id="card-used"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    placeholder="0,00"
+                    className="pl-10 tabular"
+                    disabled={isSubmitting}
+                    {...register('initial_used_amount', { valueAsNumber: true })}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="card-available">Quanto tem disponível (R$)</Label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-semibold text-muted-foreground">
+                    R$
+                  </span>
+                  <Input
+                    id="card-available"
+                    type="number"
+                    step="0.01"
+                    placeholder="0,00"
+                    className="pl-10 tabular"
+                    disabled={isSubmitting}
+                    value={hasUsedValue ? fromCents(availableCents) : ''}
+                    onChange={(e) => handleAvailableChange(e.target.value)}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {errors.initial_used_amount && (
+              <p className="text-xs text-destructive">{errors.initial_used_amount.message}</p>
+            )}
+
+            <div className="space-y-1">
+              <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                <div
+                  className={`h-full transition-all ${
+                    usagePercent >= 90
+                      ? 'bg-rose-500'
+                      : usagePercent >= 70
+                      ? 'bg-amber-500'
+                      : 'bg-primary'
+                  }`}
+                  style={{ width: `${usagePercent}%` }}
+                />
+              </div>
+              <p className="text-[11px] text-muted-foreground">
+                {usagePercent}% do limite em uso
+                {availableCents < 0 && ' — gasto acima do limite'}
+              </p>
+            </div>
+
+            <p className="flex items-start gap-1.5 text-[11px] leading-relaxed text-muted-foreground">
+              <Info className="mt-0.5 size-3 shrink-0" />
+              <span>
+                Preencha um dos dois: o outro é calculado automaticamente. Esse valor consome o
+                limite, mas não vira despesa no fluxo de caixa.
+                {registeredUsedCents > 0 &&
+                  ` Já existem ${formatBRL(fromCents(registeredUsedCents))} em compras lançadas no app, somadas automaticamente.`}
+              </span>
+            </p>
           </div>
 
           {/* Dias de Fechamento e Vencimento */}
@@ -301,4 +418,3 @@ export function CardDialog({
     </Dialog>
   )
 }
-

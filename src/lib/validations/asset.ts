@@ -25,3 +25,4 @@ export const assetSchema = z.object({
 })
 
 export type AssetFormData = z.infer<typeof assetSchema>
+

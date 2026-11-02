@@ -66,3 +66,4 @@ export const investmentTxSchema = z.object({
 })
 
 export type InvestmentTxFormData = z.infer<typeof investmentTxSchema>
+

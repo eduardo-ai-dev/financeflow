@@ -65,3 +65,4 @@ export async function deleteLiability(id: string): Promise<void> {
   const { error } = await supabase.from('liabilities').delete().eq('id', id)
   if (error) throw error
 }
+

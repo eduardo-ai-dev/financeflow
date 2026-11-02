@@ -55,6 +55,7 @@ export interface CreditCard {
   institution: string | null
   brand: CardBrand
   limit_amount: number
+  initial_used_amount: number
   closing_day: number
   due_day: number
   color: string | null

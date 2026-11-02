@@ -26,3 +26,4 @@ export const goalSchema = z.object({
 })
 
 export type GoalFormData = z.infer<typeof goalSchema>
+

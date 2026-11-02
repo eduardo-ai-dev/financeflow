@@ -161,7 +161,7 @@ export default function CartoesPage() {
           <div className="tabular text-2xl font-bold tracking-tight text-rose-600 dark:text-rose-400">
             {isLoadingCards ? <Skeleton className="h-8 w-32 mt-1" /> : formatBRL(totalUsedLimit)}
           </div>
-          <p className="text-[11px] text-muted-foreground">Faturas em aberto e futuras</p>
+          <p className="text-[11px] text-muted-foreground">Compras, faturas e gastos informados</p>
         </div>
 
         {/* Total de Limite Cadastrado */}
@@ -260,7 +260,7 @@ export default function CartoesPage() {
                     />
                   </div>
                   <div className="flex items-center justify-between text-[11px] text-muted-foreground pt-0.5">
-                    <span>Faturas: {formatBRL(card.used_amount)}</span>
+                    <span>Gasto: {formatBRL(card.used_amount)}</span>
                     <span>Total: {formatBRL(card.limit_amount)}</span>
                   </div>
                 </div>

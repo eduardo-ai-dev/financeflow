@@ -128,3 +128,4 @@ describe('Fase 5 — Motor Matemático de Metas e Conversão', () => {
     expect(progressPercent).toBe(100)
   })
 })
+

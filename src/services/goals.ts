@@ -189,3 +189,4 @@ export async function purchaseGoalAndConvertToAsset(params: ConvertGoalParams): 
 
   return { goal: updatedGoal as Goal, asset: asset as Asset }
 }
+

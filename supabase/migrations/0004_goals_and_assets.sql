@@ -110,3 +110,4 @@ create policy assets_update_own on public.assets
   using (user_id = (select auth.uid())) with check (user_id = (select auth.uid()));
 create policy assets_delete_own on public.assets
   for delete to authenticated using (user_id = (select auth.uid()));
+
