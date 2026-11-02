@@ -34,12 +34,12 @@ Construir o FinanceFlow (README.md) de forma incremental: SPA React + TS + Vite,
 ## 3. Roadmap (igual ao README)
 1. **Fundação** (Concluída)
 2. **Contas, categorias, entradas, saídas, transferências** (Concluída)
-3. **Cartões, faturas, recorrências, parcelamentos** (Concluída e migrada no Supabase)
-4. **Projetos + módulo imobiliário (SAC/Price, INCC, amortizações)** (Concluída / Código pronto)
-5. Metas & Wishlist (conversão em ativo)
-6. Investimentos + balanço patrimonial
-7. Planejamento futuro (sandbox de cenários)
-8. Relatórios, calendário, alertas, import/export
+3. **Cartões, faturas, recorrências, parcelamentos** (Concluída)
+4. **Projetos + módulo imobiliário (SAC/Price, INCC, amortizações)** (Concluída)
+5. **Metas & Wishlist (conversão em ativo patrimonial)** (Concluída)
+6. **Investimentos + balanço patrimonial real** (Concluída)
+7. **Planejamento futuro (sandbox de cenários)** (Concluída)
+8. **Relatórios, calendário, DRE, exportação CSV e configurações** (Concluída)
 
 ---
 
@@ -110,6 +110,68 @@ Construir o FinanceFlow (README.md) de forma incremental: SPA React + TS + Vite,
 
 ## Pronto quando (Fase 4)
 - [x] O usuário gerencia projetos isolados com controle orçamentário estrito e controla a complexidade da aquisição imobiliária (entrada, evolução de obra/INCC, financiamento SAC/Price e simulador de amortização com economia de juros).
+
+---
+
+## 8. Fase 5 — Metas & Wishlist com Conversão Patrimonial (Concluída)
+- [x] **T5.1** Migração SQL `0004_goals_and_assets.sql`: tabelas `goals`, `assets`, triggers de auditoria e políticas de RLS → Verify: arquivo SQL aplicado no Supabase com êxito
+- [x] **T5.2** Esquemas Zod (`goal.ts`, `asset.ts`) e tipagem estrita em `database.ts` → Verify: types e imports sem erros
+- [x] **T5.3** Camada de serviços (`goals.ts`, `assets.ts`) e hooks TanStack Query (`useGoals`, `useAssets`) → Verify: mutations com refetch reativo
+- [x] **T5.4** Modais da Fase 5: `GoalDialog` (criação/edição com prioridades), `GoalContributeDialog` (aporte rápido) e `GoalConvertDialog` (Regra 1: conversão em bem patrimonial e baixa do caixa) → Verify: submissão de formulários e integridade
+- [x] **T5.5** Tela de Metas & Wishlist em `/metas`: separação em abas (Metas Ativas, Wishlist de Desejos, Concluídas/Patrimônio), barras de progresso e ações rápidas → Verify: exibição e transição de status
+- [x] **T5.6** Testes unitários no Vitest (`goals-and-assets.test.ts`): validação de schemas, cálculo de progresso sem dízimas em centavos e regras de conversão patrimonial → Verify: 60/60 testes aprovados
+- [x] **T5.7** Verificação final da Fase 5: `npm.cmd run lint` (0 erros), `npx.cmd tsc --noEmit` (0 erros) e build → Verify: tudo aprovado
+
+## Pronto quando (Fase 5)
+- [x] O usuário planeja metas e compras futuras na wishlist, acumula reservas com aportes e, ao comprar, converte automaticamente o item em um bem patrimonial ativo no balanço.
+
+---
+
+## 9. Fase 6 — Investimentos e Balanço Patrimonial Real (Concluída)
+- [x] **T6.1** Migração SQL `0005_investments_and_patrimony.sql`: tabelas `investments`, `investment_transactions`, `liabilities`, triggers e RLS → Verify: arquivo SQL gerado e aplicado no Supabase
+- [x] **T6.2** Motor contábil de Balanço Patrimonial (`src/lib/patrimony.ts`): cálculo de Ativos Brutos (Caixa + Investimentos + Bens Físicos + Imóveis), Passivos Totais (Financiamentos + Dívidas/Empréstimos + Faturas) e Patrimônio Líquido em centavos inteiros → Verify: funções testadas
+- [x] **T6.3** Esquemas Zod (`investment.ts`, `liability.ts`) e tipos em `database.ts` → Verify: tipagem estrita
+- [x] **T6.4** Serviços (`investments.ts`, `liabilities.ts`) e hooks (`useInvestments`, `useLiabilities`, `usePatrimony`) garantindo a Regra 4 (Aporte em investimento NÃO é despesa de consumo) → Verify: transferências patrimoniais sem inflar despesas
+- [x] **T6.5** Modais de Investimentos e Passivos: `InvestmentDialog`, `InvestmentTransactionDialog` e `LiabilityDialog` → Verify: cadastro e aportes com vínculo bancário neutro
+- [x] **T6.6** Tela de Investimentos em `/investimentos`: KPIs de carteira, gráfico Recharts de alocação por classe, rentabilidade calculada e histórico de proventos/dividendos → Verify: visualização consolidada
+- [x] **T6.7** Tela de Balanço Patrimonial em `/patrimonio`: painel de Ativos vs. Passivos, gráficos de rosca comparativos, taxa de endividamento e índice de liquidez imediata → Verify: cálculo de patrimônio líquido real
+- [x] **T6.8** Testes unitários no Vitest (`investments-and-patrimony.test.ts`): neutralidade contábil do aporte e cálculo exato do balanço patrimonial → Verify: 66/66 testes aprovados
+- [x] **T6.9** Verificação final da Fase 6: lint, tsc e build → Verify: 100% de sucesso
+
+## Pronto quando (Fase 6)
+- [x] O usuário gerencia sua carteira de investimentos e acompanha seu Patrimônio Líquido Real através de um balanço contábil verdadeiro, sem misturar investimentos com despesas de consumo (Regra 4).
+
+---
+
+## 10. Fase 7 — Planejamento Futuro & Simulador Sandbox (Concluída)
+- [x] **T7.1** Motor de Projeção Financeira Sandbox (`src/lib/simulation.ts`): simulação mês a mês (3, 6, 12, 24, 60 meses) de receitas, despesas, aportes compostos e eventos avulsos operando puramente em memória (Regra 5) → Verify: testes matemáticos
+- [x] **T7.2** Tela de Planejamento em `/planejamento`:
+  - Controles interativos em tempo real (horizonte, % de receita, ajuste de gastos, rentabilidade dos ativos)
+  - Botões de pré-configurações prontas (Conservador, Realista, Otimista, Transição de Carreira)
+  - Gráfico comparativo Recharts `LineChart` entre Cenário Base e Cenário Simulado
+  - Simulador de eventos e choques de caixa extraordinários
+- [x] **T7.3** Testes unitários no Vitest (`simulation-and-reports.test.ts`): validação das projeções sandbox e imunidade dos dados reais → Verify: aprovado
+
+## Pronto quando (Fase 7)
+- [x] O usuário simula decisões futuras e choques financeiros sem risco de poluir suas contas e transações reais.
+
+---
+
+## 11. Fase 8 — Relatórios Gerenciais, DRE, Vencimentos e Configurações (Concluída)
+- [x] **T8.1** Tela de Relatórios em `/relatorios`:
+  - DRE Pessoal / Demonstrativo de Resultado com separação de consumo, aportes patrimoniais e financiamentos
+  - Exportação em CSV no padrão oficial brasileiro (delimitador `;` e decimal `,` compatível com Excel)
+  - Agenda consolidada dos próximos vencimentos (transações pendentes, faturas e parcelas de imóveis)
+- [x] **T8.2** Tela de Configurações em `/configuracoes`:
+  - Perfil de usuário e moeda padrão (BRL)
+  - Alternador de tema Claro / Escuro
+  - Backup integral e soberania de dados (download de arquivo JSON estruturado com todas as 11 tabelas)
+  - Checklist das 7 Regras Inegociáveis do README
+  - Encerramento de sessão com logout seguro
+- [x] **T8.3** Auditoria final de qualidade: 8 suítes com 70 testes Vitest passando 100%, `oxlint` com zero warnings e zero errors, `tsc --noEmit` sem erros e `npm.cmd run build` gerando produção otimizada com code-splitting.
+
+## Pronto quando (Fase 8)
+- [x] O sistema entrega inteligência gerencial completa, relatórios contábeis, soberania de dados e estabilidade total para o usuário.
 
 ## Observações do ambiente
 - Node v24 e Git OK. **Docker não instalado** → Supabase local (CLI) inviável; usar **projeto Supabase na nuvem**.
