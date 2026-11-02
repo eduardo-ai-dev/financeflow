@@ -292,13 +292,16 @@ export const transactions = pgTable('transactions', {
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 })
 
-export const auditLog = pgTable('audit_log', {
+export const auditLogs = pgTable('audit_logs', {
   id: bigserial('id', { mode: 'number' }).primaryKey(),
-  userId: uuid('user_id'),
+  userId: uuid('user_id').notNull(),
   tableName: text('table_name').notNull(),
-  recordId: uuid('record_id'),
+  recordId: uuid('record_id').notNull(),
   action: text('action').notNull(),
   oldData: jsonb('old_data'),
   newData: jsonb('new_data'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 })
+
+export const auditLog = auditLogs
+
