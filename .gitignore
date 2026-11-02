@@ -6,8 +6,10 @@ dist
 dist-ssr
 *.local
 
-# Variáveis de ambiente / segredos
+# Variáveis de ambiente / segredos (NUNCA versionar .env reais)
 .env
+.env.*
+!.env.example
 .env.local
 .env.*.local
 

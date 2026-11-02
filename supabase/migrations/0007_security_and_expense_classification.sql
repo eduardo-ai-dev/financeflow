@@ -1,6 +1,6 @@
 -- =============================================================================
--- FinanceFlow — Migração 0007: Blindagem de Segurança (RLS/Grants/FKs Compostas)
--- e Classificação de Gastos (Fixa, Variável, Eventual, Extraordinária)
+-- FinanceFlow — Migração 0007: Blindagem de Segurança (RLS/Grants/FKs Compostas,
+-- Forçamento de JWT user_id, Políticas de Storage) e Classificação de Gastos
 -- =============================================================================
 
 -- -----------------------------------------------------------------------------
@@ -13,7 +13,6 @@ alter table public.transactions
     or expense_classification in ('fixed', 'variable', 'occasional', 'extraordinary')
   );
 
--- Restringe expense_classification apenas para despesas e compras no cartão
 alter table public.transactions
   drop constraint if exists transactions_expense_classification_check;
 
@@ -38,8 +37,6 @@ alter table public.goals
 
 -- -----------------------------------------------------------------------------
 -- 3. Chaves Estrangeiras Compostas (id, user_id) para isolamento multi-tenant
---    Garante no nível do SGBD que nenhuma tabela referencie registros de outro
---    usuário, mesmo em caso de tentativa de manipulação direta via API.
 -- -----------------------------------------------------------------------------
 
 -- credit_cards -> default_account_id
@@ -188,9 +185,67 @@ alter table public.investment_transactions
   on delete set null (account_id);
 
 -- -----------------------------------------------------------------------------
--- 4. Princípio do Menor Privilégio (REVOKE ALL + GRANT mínimo para authenticated)
---    Remove TRUNCATE, REFERENCES, TRIGGER e bloqueia completamente o role anon
---    em todas as tabelas e views criadas nas Fases 3 a 6.
+-- 4. Regra 5: Nunca aceitar user_id vindo do cliente — sempre obter pelo JWT
+--    Trigger que sobrescreve NEW.user_id com auth.uid() no INSERT e bloqueia
+--    qualquer tentativa de troca de titularidade (user_id) no UPDATE.
+-- -----------------------------------------------------------------------------
+create or replace function public.enforce_jwt_user_id()
+returns trigger
+language plpgsql
+security invoker
+set search_path = public
+as $$
+declare
+  jwt_uid uuid := auth.uid();
+begin
+  if tg_op = 'INSERT' then
+    if jwt_uid is not null then
+      new.user_id := jwt_uid;
+    elsif new.user_id is null then
+      raise exception 'Usuário não autenticado (JWT ausente)';
+    end if;
+  elsif tg_op = 'UPDATE' then
+    if new.user_id is distinct from old.user_id then
+      raise exception 'Alteração de titularidade (user_id) não permitida';
+    end if;
+  end if;
+  return new;
+end;
+$$;
+
+do $$
+declare
+  tbl text;
+begin
+  foreach tbl in array array[
+    'accounts',
+    'categories',
+    'transactions',
+    'credit_cards',
+    'card_invoices',
+    'installments',
+    'projects',
+    'real_estate_properties',
+    'real_estate_amortizations',
+    'goals',
+    'assets',
+    'investments',
+    'investment_transactions',
+    'liabilities'
+  ]
+  loop
+    execute format('drop trigger if exists %I on public.%I', tbl || '_enforce_jwt_user_id', tbl);
+    execute format(
+      'create trigger %I before insert or update on public.%I for each row execute function public.enforce_jwt_user_id()',
+      tbl || '_enforce_jwt_user_id',
+      tbl
+    );
+  end loop;
+end;
+$$;
+
+-- -----------------------------------------------------------------------------
+-- 5. Princípio do Menor Privilégio (REVOKE ALL + GRANT mínimo para authenticated)
 -- -----------------------------------------------------------------------------
 revoke all on table
   public.credit_cards,
@@ -222,3 +277,57 @@ to authenticated;
 
 revoke all on table public.card_limits from anon, authenticated;
 grant select on table public.card_limits to authenticated;
+
+-- -----------------------------------------------------------------------------
+-- 6. Regra 6: Supabase Storage com RLS e Policies Explícitas por Usuário
+--    Cada usuário só pode ler/gravar/atualizar/excluir arquivos dentro da
+--    sua própria pasta: user-attachments/<auth.uid()>/<arquivo>
+-- -----------------------------------------------------------------------------
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values (
+  'user-attachments',
+  'user-attachments',
+  false,
+  5242880, -- 5 MB
+  array['image/png', 'image/jpeg', 'image/webp', 'application/pdf']
+)
+on conflict (id) do update set
+  public = excluded.public,
+  file_size_limit = excluded.file_size_limit,
+  allowed_mime_types = excluded.allowed_mime_types;
+
+drop policy if exists storage_objects_select_own on storage.objects;
+create policy storage_objects_select_own on storage.objects
+  for select to authenticated
+  using (
+    bucket_id = 'user-attachments'
+    and (storage.foldername(name))[1] = (select auth.uid())::text
+  );
+
+drop policy if exists storage_objects_insert_own on storage.objects;
+create policy storage_objects_insert_own on storage.objects
+  for insert to authenticated
+  with check (
+    bucket_id = 'user-attachments'
+    and (storage.foldername(name))[1] = (select auth.uid())::text
+  );
+
+drop policy if exists storage_objects_update_own on storage.objects;
+create policy storage_objects_update_own on storage.objects
+  for update to authenticated
+  using (
+    bucket_id = 'user-attachments'
+    and (storage.foldername(name))[1] = (select auth.uid())::text
+  )
+  with check (
+    bucket_id = 'user-attachments'
+    and (storage.foldername(name))[1] = (select auth.uid())::text
+  );
+
+drop policy if exists storage_objects_delete_own on storage.objects;
+create policy storage_objects_delete_own on storage.objects
+  for delete to authenticated
+  using (
+    bucket_id = 'user-attachments'
+    and (storage.foldername(name))[1] = (select auth.uid())::text
+  );

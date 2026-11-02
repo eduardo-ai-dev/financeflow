@@ -21,6 +21,7 @@
     "class-variance-authority": "^0.7.1",
     "cn": "^0.5.1",
     "date-fns": "^4.4.0",
+    "drizzle-orm": "^0.45.4",
     "lucide-react": "^1.66.0",
     "radix-ui": "^1.8.1",
     "react": "^19.3.1",

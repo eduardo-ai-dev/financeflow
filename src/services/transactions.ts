@@ -4,6 +4,18 @@ import type { Transaction, Account, Category } from '@/types/database'
 import type { TransactionFormData } from '@/lib/validations/transaction'
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+const DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/
+
+/**
+ * Sanitiza termos de busca removendo curingas e delimitadores especiais do PostgREST
+ * para evitar manipulação de filtros.
+ */
+export function sanitizeSearchTerm(raw: string): string {
+  return raw
+    .replace(/[%_(),.*\\]/g, ' ')
+    .trim()
+    .slice(0, 100)
+}
 
 export interface TransactionWithDetails extends Transaction {
   account?: Account | null
@@ -59,16 +71,19 @@ export async function fetchTransactions(
     query = query.eq('category_id', filters.categoryId)
   }
 
-  if (filters.startDate) {
+  if (filters.startDate && DATE_REGEX.test(filters.startDate)) {
     query = query.gte('due_date', filters.startDate)
   }
 
-  if (filters.endDate) {
+  if (filters.endDate && DATE_REGEX.test(filters.endDate)) {
     query = query.lte('due_date', filters.endDate)
   }
 
   if (filters.search) {
-    query = query.ilike('description', `%${filters.search.trim()}%`)
+    const safeSearch = sanitizeSearchTerm(filters.search)
+    if (safeSearch.length > 0) {
+      query = query.ilike('description', `%${safeSearch}%`)
+    }
   }
 
   const { data, error } = await query
@@ -82,6 +97,7 @@ export async function createTransaction(data: TransactionFormData): Promise<Tran
   const isExpense = data.kind === 'expense'
   const isCompleted = data.status === 'completed'
 
+  // Nota (Regra 5): user_id NUNCA é enviado pelo cliente; é preenchido no banco via JWT (auth.uid())
   const basePayload = {
     kind: data.kind,
     status: data.status,
