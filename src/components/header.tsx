@@ -1,9 +1,11 @@
+import { useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import { getModuleByPath } from '@/config/modules'
 import { useAuth } from '@/hooks/use-auth'
 import { ThemeToggle } from '@/components/theme-toggle'
+import { TransactionDialog } from '@/components/transaction-dialog'
 import { Button } from '@/components/ui/button'
-import { Menu, LogOut, ShieldCheck } from 'lucide-react'
+import { Menu, LogOut, ShieldCheck, Plus } from 'lucide-react'
 
 interface HeaderProps {
   onOpenMobileSidebar: () => void
@@ -12,6 +14,7 @@ interface HeaderProps {
 export function Header({ onOpenMobileSidebar }: HeaderProps) {
   const location = useLocation()
   const { user, profile, signOut } = useAuth()
+  const [transactionDialogOpen, setTransactionDialogOpen] = useState(false)
   const activeModule = getModuleByPath(location.pathname)
 
   const userInitial = profile?.full_name
@@ -52,6 +55,16 @@ export function Header({ onOpenMobileSidebar }: HeaderProps) {
           RLS Ativa
         </div>
 
+        <Button
+          size="sm"
+          onClick={() => setTransactionDialogOpen(true)}
+          className="h-8 text-xs font-semibold gap-1.5 shadow-xs"
+        >
+          <Plus className="size-3.5" />
+          <span className="hidden sm:inline">Novo Lançamento</span>
+          <span className="sm:hidden">Novo</span>
+        </Button>
+
         <ThemeToggle />
 
         <div className="h-5 w-px bg-border mx-0.5 hidden sm:block" />
@@ -86,6 +99,10 @@ export function Header({ onOpenMobileSidebar }: HeaderProps) {
           </Button>
         </div>
       </div>
+      <TransactionDialog
+        open={transactionDialogOpen}
+        onOpenChange={setTransactionDialogOpen}
+      />
     </header>
   )
 }

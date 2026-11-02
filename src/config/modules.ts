@@ -5,6 +5,7 @@ import {
   Landmark,
   ArrowDownLeft,
   ArrowUpRight,
+  Tag,
   CreditCard,
   CalendarClock,
   FolderKanban,
@@ -78,6 +79,14 @@ export const MODULE_GROUPS: ModuleGroup[] = [
         path: '/saidas',
         icon: ArrowUpRight,
         description: 'Controle de despesas fixas, variáveis, eventuais e contas a pagar.',
+        phase: 2,
+      },
+      {
+        id: 'categorias',
+        title: 'Categorias',
+        path: '/categorias',
+        icon: Tag,
+        description: 'Organização de receitas e despesas por categorias e subcategorias.',
         phase: 2,
       },
       {

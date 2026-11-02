@@ -1,0 +1,90 @@
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import {
+  fetchTransactions,
+  createTransaction as createTransactionService,
+  updateTransaction as updateTransactionService,
+  markTransactionCompleted,
+  markTransactionPending,
+  deleteTransaction as deleteTransactionService,
+  type TransactionFilters,
+  type TransactionWithDetails,
+} from '@/services/transactions'
+import type { TransactionFormData } from '@/lib/validations/transaction'
+
+export function useTransactions(filters: TransactionFilters = {}) {
+  const queryClient = useQueryClient()
+
+  const queryKey = ['transactions', filters]
+
+  const {
+    data: transactions = [],
+    isLoading,
+    error,
+    refetch,
+  } = useQuery({
+    queryKey,
+    queryFn: () => fetchTransactions(filters),
+  })
+
+  function invalidateAllFinancialData() {
+    queryClient.invalidateQueries({ queryKey: ['transactions'] })
+    queryClient.invalidateQueries({ queryKey: ['accounts'] })
+    queryClient.invalidateQueries({ queryKey: ['dashboard-metrics'] })
+  }
+
+  const createMutation = useMutation({
+    mutationFn: (data: TransactionFormData) => createTransactionService(data),
+    onSuccess: () => {
+      invalidateAllFinancialData()
+    },
+  })
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<TransactionFormData> }) =>
+      updateTransactionService(id, data),
+    onSuccess: () => {
+      invalidateAllFinancialData()
+    },
+  })
+
+  const completeMutation = useMutation({
+    mutationFn: ({ id, paidDate }: { id: string; paidDate?: string }) =>
+      markTransactionCompleted(id, paidDate),
+    onSuccess: () => {
+      invalidateAllFinancialData()
+    },
+  })
+
+  const pendingMutation = useMutation({
+    mutationFn: (id: string) => markTransactionPending(id),
+    onSuccess: () => {
+      invalidateAllFinancialData()
+    },
+  })
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => deleteTransactionService(id),
+    onSuccess: () => {
+      invalidateAllFinancialData()
+    },
+  })
+
+  return {
+    transactions,
+    isLoading,
+    error,
+    refetch,
+    createTransaction: createMutation.mutateAsync,
+    isCreating: createMutation.isPending,
+    updateTransaction: updateMutation.mutateAsync,
+    isUpdating: updateMutation.isPending,
+    markAsCompleted: completeMutation.mutateAsync,
+    isCompleting: completeMutation.isPending,
+    markAsPending: pendingMutation.mutateAsync,
+    isPendingAction: pendingMutation.isPending,
+    deleteTransaction: deleteMutation.mutateAsync,
+    isDeleting: deleteMutation.isPending,
+  }
+}
+
+export type { TransactionWithDetails }

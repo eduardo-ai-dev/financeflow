@@ -27,6 +27,7 @@ const ResumoPage = lazy(() => import('@/pages/resumo-page'))
 const ContasPage = lazy(() => import('@/pages/contas-page'))
 const EntradasPage = lazy(() => import('@/pages/entradas-page'))
 const SaidasPage = lazy(() => import('@/pages/saidas-page'))
+const CategoriasPage = lazy(() => import('@/pages/categorias-page'))
 const CartoesPage = lazy(() => import('@/pages/cartoes-page'))
 const ParcelamentosPage = lazy(() => import('@/pages/parcelamentos-page'))
 const ProjetosPage = lazy(() => import('@/pages/projetos-page'))
@@ -62,6 +63,7 @@ function App() {
               <Route path="/contas" element={<ContasPage />} />
               <Route path="/entradas" element={<EntradasPage />} />
               <Route path="/saidas" element={<SaidasPage />} />
+              <Route path="/categorias" element={<CategoriasPage />} />
               <Route path="/cartoes" element={<CartoesPage />} />
               <Route path="/parcelamentos" element={<ParcelamentosPage />} />
               <Route path="/projetos" element={<ProjetosPage />} />
