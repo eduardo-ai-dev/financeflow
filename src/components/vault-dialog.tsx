@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useForm } from 'react-hook-form'
+import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import {
   vaultSchema,
@@ -47,7 +47,7 @@ export function VaultDialog({ open, onOpenChange, vaultToEdit }: VaultDialogProp
     register,
     handleSubmit,
     setValue,
-    watch,
+    control,
     reset,
     formState: { errors, isSubmitting },
   } = useForm<VaultFormData>({
@@ -65,12 +65,11 @@ export function VaultDialog({ open, onOpenChange, vaultToEdit }: VaultDialogProp
     },
   })
 
-  const selectedColor = watch('color')
-  const selectedPurpose = watch('purpose')
+  const selectedColor = useWatch({ control, name: 'color' })
+  const selectedPurpose = useWatch({ control, name: 'purpose' })
 
   useEffect(() => {
     if (!open) return
-    setServerError(null)
 
     if (vaultToEdit) {
       reset({
@@ -118,7 +117,13 @@ export function VaultDialog({ open, onOpenChange, vaultToEdit }: VaultDialogProp
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        if (!next) setServerError(null)
+        onOpenChange(next)
+      }}
+    >
       <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">

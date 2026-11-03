@@ -112,3 +112,4 @@ export function PwaInstallDialog({ open, onOpenChange }: PwaInstallDialogProps) 
     </Dialog>
   )
 }
+

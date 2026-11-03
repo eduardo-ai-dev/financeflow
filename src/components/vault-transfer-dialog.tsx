@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
-import { useForm } from 'react-hook-form'
+import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { vaultTransferSchema, type VaultTransferFormData } from '@/lib/validations/vault'
 import { useVaults, type VaultItem } from '@/hooks/use-vaults'
@@ -41,7 +41,8 @@ export function VaultTransferDialog({
   const { activeVaults, depositToVault, withdrawFromVault } = useVaults()
   const { accounts } = useAccounts()
 
-  const [mode, setMode] = useState<'deposit' | 'withdraw'>(initialMode)
+  const [modeOverride, setModeOverride] = useState<'deposit' | 'withdraw' | null>(null)
+  const mode = modeOverride ?? initialMode
   const [serverError, setServerError] = useState<string | null>(null)
 
   const operationalAccounts = useMemo(
@@ -52,7 +53,7 @@ export function VaultTransferDialog({
   const {
     register,
     handleSubmit,
-    watch,
+    control,
     reset,
     formState: { errors, isSubmitting },
   } = useForm<VaultTransferFormData>({
@@ -66,8 +67,8 @@ export function VaultTransferDialog({
     },
   })
 
-  const selectedVaultId = watch('vault_id')
-  const inputAmount = watch('amount') || 0
+  const selectedVaultId = useWatch({ control, name: 'vault_id' })
+  const inputAmount = useWatch({ control, name: 'amount' }) || 0
 
   const selectedVault = useMemo(
     () => activeVaults.find((v) => v.id === selectedVaultId),
@@ -76,8 +77,6 @@ export function VaultTransferDialog({
 
   useEffect(() => {
     if (!open) return
-    setServerError(null)
-    setMode(initialMode)
     reset({
       vault_id: initialVault?.id || activeVaults[0]?.id || '',
       account_id: operationalAccounts[0]?.id || '',
@@ -85,7 +84,7 @@ export function VaultTransferDialog({
       date: getTodayDateString(),
       notes: '',
     })
-  }, [open, initialVault, initialMode, activeVaults, operationalAccounts, reset])
+  }, [open, initialVault, activeVaults, operationalAccounts, reset])
 
   // Cálculo de projeção de saldo
   const projectedVaultBalance = useMemo(() => {
@@ -136,7 +135,16 @@ export function VaultTransferDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        if (!next) {
+          setServerError(null)
+          setModeOverride(null)
+        }
+        onOpenChange(next)
+      }}
+    >
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -162,7 +170,7 @@ export function VaultTransferDialog({
           <div className="grid grid-cols-2 gap-2 p-1 rounded-xl bg-muted/40 border">
             <button
               type="button"
-              onClick={() => setMode('deposit')}
+              onClick={() => setModeOverride('deposit')}
               className={`flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                 mode === 'deposit'
                   ? 'bg-background text-emerald-600 dark:text-emerald-400 shadow-2xs font-bold'
@@ -174,7 +182,7 @@ export function VaultTransferDialog({
             </button>
             <button
               type="button"
-              onClick={() => setMode('withdraw')}
+              onClick={() => setModeOverride('withdraw')}
               className={`flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                 mode === 'withdraw'
                   ? 'bg-background text-blue-600 dark:text-blue-400 shadow-2xs font-bold'
