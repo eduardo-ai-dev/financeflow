@@ -9,13 +9,21 @@ import {
   Tag,
   CreditCard,
   CalendarClock,
+  Receipt,
+  Repeat,
+  ArrowRightLeft,
   FolderKanban,
   Home,
   Target,
   TrendingUp,
   Scale,
+  BadgePercent,
+  Vault,
+  FolderLock,
   Sparkles,
+  Calculator,
   FileSpreadsheet,
+  Bell,
   Settings,
 } from 'lucide-react'
 
@@ -25,16 +33,18 @@ export interface ModuleItem {
   path: string
   icon: LucideIcon
   description: string
-  phase: number
+  phase?: number
 }
 
 export interface ModuleGroup {
+  id: string
   name: string
   items: ModuleItem[]
 }
 
 export const MODULE_GROUPS: ModuleGroup[] = [
   {
+    id: 'visao-geral',
     name: 'Visão Geral',
     items: [
       {
@@ -43,7 +53,6 @@ export const MODULE_GROUPS: ModuleGroup[] = [
         path: '/',
         icon: LayoutDashboard,
         description: 'Visão executiva consolidada da sua vida financeira e patrimonial.',
-        phase: 1,
       },
       {
         id: 'resumo',
@@ -51,19 +60,18 @@ export const MODULE_GROUPS: ModuleGroup[] = [
         path: '/resumo',
         icon: BarChart3,
         description: 'Análise detalhada do fluxo de caixa mensal (receitas vs. despesas).',
-        phase: 2,
       },
       {
         id: 'calendario',
-        title: 'Calendário',
+        title: 'Calendário Financeiro',
         path: '/calendario',
         icon: CalendarDays,
         description: 'Visão mensal de vencimentos de contas, faturas de cartão e recebimentos.',
-        phase: 8,
       },
     ],
   },
   {
+    id: 'fluxo-de-caixa',
     name: 'Fluxo de Caixa',
     items: [
       {
@@ -72,7 +80,6 @@ export const MODULE_GROUPS: ModuleGroup[] = [
         path: '/contas',
         icon: Landmark,
         description: 'Gestão de bancos, carteiras, dinheiro em espécie e liquidez imediata.',
-        phase: 2,
       },
       {
         id: 'entradas',
@@ -80,7 +87,6 @@ export const MODULE_GROUPS: ModuleGroup[] = [
         path: '/entradas',
         icon: ArrowDownLeft,
         description: 'Controle de salários, rendimentos, bônus e contas a receber.',
-        phase: 2,
       },
       {
         id: 'saidas',
@@ -88,7 +94,6 @@ export const MODULE_GROUPS: ModuleGroup[] = [
         path: '/saidas',
         icon: ArrowUpRight,
         description: 'Controle de despesas fixas, variáveis, eventuais e contas a pagar.',
-        phase: 2,
       },
       {
         id: 'categorias',
@@ -96,7 +101,6 @@ export const MODULE_GROUPS: ModuleGroup[] = [
         path: '/categorias',
         icon: Tag,
         description: 'Organização de receitas e despesas por categorias e subcategorias.',
-        phase: 2,
       },
       {
         id: 'cartoes',
@@ -104,7 +108,6 @@ export const MODULE_GROUPS: ModuleGroup[] = [
         path: '/cartoes',
         icon: CreditCard,
         description: 'Gestão de limites, faturas atuais/futuras e compras no crédito.',
-        phase: 3,
       },
       {
         id: 'parcelamentos',
@@ -112,11 +115,32 @@ export const MODULE_GROUPS: ModuleGroup[] = [
         path: '/parcelamentos',
         icon: CalendarClock,
         description: 'Central unificada de compromissos parcelados com ou sem cartão.',
-        phase: 3,
+      },
+      {
+        id: 'contas-a-pagar',
+        title: 'Contas a Pagar/Receber',
+        path: '/contas-a-pagar',
+        icon: Receipt,
+        description: 'Central consolidada de títulos e compromissos operacionais a liquidar.',
+      },
+      {
+        id: 'recorrencias',
+        title: 'Recorrências',
+        path: '/recorrencias',
+        icon: Repeat,
+        description: 'Controle inteligente de assinaturas, planos mensais e contratos recorrentes.',
+      },
+      {
+        id: 'transferencias',
+        title: 'Transferências',
+        path: '/transferencias',
+        icon: ArrowRightLeft,
+        description: 'Movimentações e liquidez entre contas bancárias, carteiras e cofres.',
       },
     ],
   },
   {
+    id: 'patrimonio-e-objetivos',
     name: 'Patrimônio & Objetivos',
     items: [
       {
@@ -125,7 +149,6 @@ export const MODULE_GROUPS: ModuleGroup[] = [
         path: '/projetos',
         icon: FolderKanban,
         description: 'Gestão de grandes objetivos isolados (carro, reforma, viagens).',
-        phase: 4,
       },
       {
         id: 'imoveis',
@@ -133,7 +156,6 @@ export const MODULE_GROUPS: ModuleGroup[] = [
         path: '/imoveis',
         icon: Home,
         description: 'Módulo especializado para aquisição, evolução de obra e financiamento SAC/Price.',
-        phase: 4,
       },
       {
         id: 'metas',
@@ -141,7 +163,6 @@ export const MODULE_GROUPS: ModuleGroup[] = [
         path: '/metas',
         icon: Target,
         description: 'Lista de desejos (Wishlist), reservas carimbadas e conversão patrimonial.',
-        phase: 5,
       },
       {
         id: 'investimentos',
@@ -149,7 +170,6 @@ export const MODULE_GROUPS: ModuleGroup[] = [
         path: '/investimentos',
         icon: TrendingUp,
         description: 'Carteira de ativos, rentabilidade, dividendos e metas de aporte.',
-        phase: 6,
       },
       {
         id: 'patrimonio',
@@ -157,11 +177,32 @@ export const MODULE_GROUPS: ModuleGroup[] = [
         path: '/patrimonio',
         icon: Scale,
         description: 'Balanço patrimonial completo (Ativos vs. Passivos = Patrimônio Líquido).',
-        phase: 6,
+      },
+      {
+        id: 'dividas',
+        title: 'Dívidas & Financiamentos',
+        path: '/dividas',
+        icon: BadgePercent,
+        description: 'Controle de passivos onerosos, empréstimos, taxas e cronogramas de amortização.',
+      },
+      {
+        id: 'cofres',
+        title: 'Reservas & Cofres',
+        path: '/cofres',
+        icon: Vault,
+        description: 'Cofres blindados, reserva de emergência e alocações carimbadas com meta.',
+      },
+      {
+        id: 'documentos',
+        title: 'Documentos',
+        path: '/documentos',
+        icon: FolderLock,
+        description: 'Armazenamento seguro de apólices, contratos, escrituras e notas fiscais.',
       },
     ],
   },
   {
+    id: 'estrategia-e-analise',
     name: 'Estratégia & Análise',
     items: [
       {
@@ -170,19 +211,32 @@ export const MODULE_GROUPS: ModuleGroup[] = [
         path: '/planejamento',
         icon: Sparkles,
         description: 'Simulador estratégico de cenários (Conservador, Realista, Otimista) e projeções.',
-        phase: 7,
+      },
+      {
+        id: 'simuladores',
+        title: 'Simuladores',
+        path: '/simuladores',
+        icon: Calculator,
+        description: 'Simulações de juros compostos, amortização antecipada e independência financeira.',
       },
       {
         id: 'relatorios',
         title: 'Relatórios',
         path: '/relatorios',
         icon: FileSpreadsheet,
-        description: 'Indicadores avançados, comparativos temporais e exportação de relatórios.',
-        phase: 8,
+        description: 'Indicadores avançados, DRE pessoal consolidado e exportação de relatórios.',
+      },
+      {
+        id: 'notificacoes',
+        title: 'Notificações',
+        path: '/notificacoes',
+        icon: Bell,
+        description: 'Central de avisos, alertas de vencimento e alertas patrimoniais.',
       },
     ],
   },
   {
+    id: 'sistema',
     name: 'Sistema',
     items: [
       {
@@ -190,8 +244,7 @@ export const MODULE_GROUPS: ModuleGroup[] = [
         title: 'Configurações',
         path: '/configuracoes',
         icon: Settings,
-        description: 'Categorias, campos customizados, alertas, importação/exportação e perfil.',
-        phase: 8,
+        description: 'Preferências visuais, portabilidade de dados e perfil de acesso.',
       },
     ],
   },
@@ -203,5 +256,5 @@ export function getModuleByPath(path: string): ModuleItem | undefined {
   if (path === '/') {
     return ALL_MODULES.find((m) => m.path === '/')
   }
-  return ALL_MODULES.find((m) => m.path !== '/' && path.startsWith(m.path))
+  return ALL_MODULES.find((m) => m.path !== '/' && (path === m.path || path.startsWith(`${m.path}/`)))
 }

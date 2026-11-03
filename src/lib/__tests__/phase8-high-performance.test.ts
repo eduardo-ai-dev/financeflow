@@ -333,3 +333,4 @@ describe('Phase 8 — Importação de Extratos CSV & Exportação PDF Segura', (
     expect(html).not.toContain('<img src=x')
   })
 })
+

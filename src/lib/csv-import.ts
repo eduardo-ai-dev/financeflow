@@ -465,3 +465,4 @@ export function generateSampleCsvTemplate(): string {
     '15/11/2026;Consultoria Pontual;1200,00;Receita;PIX recebido',
   ].join('\r\n')
 }
+

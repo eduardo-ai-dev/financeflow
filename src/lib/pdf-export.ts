@@ -365,3 +365,4 @@ export function exportFinancialReportPdf(data: ExecutivePdfReportData): void {
     }
   }, 250)
 }
+

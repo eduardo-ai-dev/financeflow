@@ -85,3 +85,4 @@ export async function removeReceiptAttachment(path: string): Promise<void> {
 
   await supabase.storage.from(STORAGE_BUCKET).remove([path])
 }
+
