@@ -6,12 +6,6 @@ import {
   expenseClassifications,
   type TransactionFormData,
 } from '@/lib/validations/transaction'
-import { formatFileSize } from '@/lib/validations/attachment'
-import {
-  uploadReceiptAttachment,
-  createReceiptSignedUrl,
-  removeReceiptAttachment,
-} from '@/services/attachments'
 import { useTransactions, type TransactionWithDetails } from '@/hooks/use-transactions'
 import { useAccounts } from '@/hooks/use-accounts'
 import { useCategories } from '@/hooks/use-categories'
@@ -37,12 +31,6 @@ import {
   Sparkles,
   Landmark,
   Tag,
-  Paperclip,
-  Upload,
-  FileText,
-  Image as ImageIcon,
-  ExternalLink,
-  X,
 } from 'lucide-react'
 
 interface TransactionDialogProps {
@@ -77,10 +65,6 @@ export function TransactionDialog({
   const [serverError, setServerError] = useState<string | null>(null)
   const [showQuickCategory, setShowQuickCategory] = useState(false)
   const [quickCategoryName, setQuickCategoryName] = useState('')
-  const [isUploadingAttachment, setIsUploadingAttachment] = useState(false)
-  const [isOpeningAttachment, setIsOpeningAttachment] = useState(false)
-  const [newlyUploadedPath, setNewlyUploadedPath] = useState<string | null>(null)
-  const fileInputRef = useRef<HTMLInputElement | null>(null)
   const autoSeededRef = useRef(false)
 
   const isEditing = !!transactionToEdit
@@ -111,7 +95,6 @@ export function TransactionDialog({
       due_date: defaultDueDate || getTodayDateString(),
       paid_date: defaultDueDate || getTodayDateString(),
       notes: '',
-      attachment: null,
     },
   })
 
@@ -120,7 +103,6 @@ export function TransactionDialog({
   const selectedAccountId = useWatch({ control, name: 'account_id' })
   const selectedToAccountId = useWatch({ control, name: 'to_account_id' })
   const selectedCategoryId = useWatch({ control, name: 'category_id' })
-  const selectedAttachment = useWatch({ control, name: 'attachment' })
   const selectedClassification = useWatch({
     control,
     name: 'expense_classification',
@@ -140,7 +122,6 @@ export function TransactionDialog({
     setServerError(null)
     setShowQuickCategory(false)
     setQuickCategoryName('')
-    setNewlyUploadedPath(null)
 
     if (transactionToEdit) {
       reset({
@@ -157,7 +138,6 @@ export function TransactionDialog({
         due_date: transactionToEdit.due_date,
         paid_date: transactionToEdit.paid_date || transactionToEdit.due_date,
         notes: transactionToEdit.notes || '',
-        attachment: transactionToEdit.attachment || null,
       })
     } else {
       const targetDate = defaultDueDate || getTodayDateString()
@@ -175,7 +155,6 @@ export function TransactionDialog({
         due_date: targetDate,
         paid_date: isFutureDate ? null : targetDate,
         notes: '',
-        attachment: null,
       })
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -210,10 +189,6 @@ export function TransactionDialog({
 
   const handleDialogChange = (nextOpen: boolean) => {
     if (!nextOpen) {
-      if (newlyUploadedPath) {
-        removeReceiptAttachment(newlyUploadedPath).catch(() => {})
-        setNewlyUploadedPath(null)
-      }
       setServerError(null)
       setShowQuickCategory(false)
     }
@@ -269,67 +244,17 @@ export function TransactionDialog({
     }
   }
 
-  async function handleAttachmentFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    e.target.value = ''
-    if (!file) return
-
-    setServerError(null)
-    setIsUploadingAttachment(true)
-    try {
-      const uploaded = await uploadReceiptAttachment(file)
-      if (newlyUploadedPath && newlyUploadedPath !== uploaded.path) {
-        removeReceiptAttachment(newlyUploadedPath).catch(() => {})
-      }
-      setNewlyUploadedPath(uploaded.path)
-      setValue('attachment', uploaded, { shouldDirty: true, shouldValidate: true })
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Erro ao anexar comprovante'
-      setServerError(msg)
-    } finally {
-      setIsUploadingAttachment(false)
-    }
-  }
-
-  async function handlePreviewAttachment() {
-    if (!selectedAttachment?.path) return
-    setServerError(null)
-    setIsOpeningAttachment(true)
-    try {
-      const signedUrl = await createReceiptSignedUrl(selectedAttachment.path)
-      window.open(signedUrl, '_blank', 'noopener,noreferrer')
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Erro ao abrir comprovante'
-      setServerError(msg)
-    } finally {
-      setIsOpeningAttachment(false)
-    }
-  }
-
-  function handleRemoveAttachment() {
-    if (newlyUploadedPath && selectedAttachment?.path === newlyUploadedPath) {
-      removeReceiptAttachment(newlyUploadedPath).catch(() => {})
-      setNewlyUploadedPath(null)
-    }
-    setValue('attachment', null, { shouldDirty: true, shouldValidate: true })
-  }
-
   async function onSubmit(data: TransactionFormData) {
     setServerError(null)
     try {
-      const previousPath = transactionToEdit?.attachment?.path
       if (isEditing && transactionToEdit) {
         await updateTransaction({
           id: transactionToEdit.id,
           data,
         })
-        if (previousPath && previousPath !== data.attachment?.path) {
-          removeReceiptAttachment(previousPath).catch(() => {})
-        }
       } else {
         await createTransaction(data)
       }
-      setNewlyUploadedPath(null)
       onOpenChange(false)
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Erro ao processar lançamento'
@@ -824,108 +749,16 @@ export function TransactionDialog({
             />
           </div>
 
-          {/* Comprovante / Recibo (Opcional) */}
-          <div className="space-y-1.5">
-            <div className="flex items-center justify-between">
-              <Label className="flex items-center gap-1.5">
-                <Paperclip className="size-3.5 text-primary" />
-                Comprovante ou Recibo (Opcional)
-              </Label>
-              <span className="text-[11px] text-muted-foreground">
-                PDF, PNG, JPG ou WEBP até 5 MB
-              </span>
-            </div>
-
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="application/pdf,image/png,image/jpeg,image/webp"
-              onChange={handleAttachmentFileSelect}
-              className="hidden"
-            />
-
-            {selectedAttachment ? (
-              <div className="flex items-center justify-between gap-2 rounded-xl border border-primary/25 bg-primary/5 px-3 py-2.5">
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-primary">
-                    {selectedAttachment.mime === 'application/pdf' ? (
-                      <FileText className="size-4" />
-                    ) : (
-                      <ImageIcon className="size-4" />
-                    )}
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-xs font-semibold text-foreground truncate">
-                      {selectedAttachment.name}
-                    </p>
-                    <p className="text-[11px] text-muted-foreground tabular">
-                      {formatFileSize(selectedAttachment.size)} &middot; Arquivo protegido
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-1 shrink-0">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    disabled={isOpeningAttachment || isSubmitting}
-                    onClick={handlePreviewAttachment}
-                    className="h-7 px-2.5 text-xs gap-1"
-                  >
-                    {isOpeningAttachment ? (
-                      <Loader2 className="size-3 animate-spin" />
-                    ) : (
-                      <ExternalLink className="size-3" />
-                    )}
-                    Abrir
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    disabled={isSubmitting}
-                    onClick={handleRemoveAttachment}
-                    className="size-7 text-muted-foreground hover:text-destructive"
-                    title="Remover comprovante"
-                  >
-                    <X className="size-3.5" />
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              <Button
-                type="button"
-                variant="outline"
-                disabled={isUploadingAttachment || isSubmitting}
-                onClick={() => fileInputRef.current?.click()}
-                className="w-full h-10 border-dashed text-xs font-medium text-muted-foreground hover:text-foreground gap-2"
-              >
-                {isUploadingAttachment ? (
-                  <>
-                    <Loader2 className="size-4 animate-spin text-primary" />
-                    Enviando comprovante com segurança...
-                  </>
-                ) : (
-                  <>
-                    <Upload className="size-4 text-primary" />
-                    Clique para anexar nota fiscal, boleto ou comprovante
-                  </>
-                )}
-              </Button>
-            )}
-          </div>
-
           <DialogFooter className="pt-2 gap-2 sm:gap-0">
             <Button
               type="button"
               variant="outline"
-              disabled={isSubmitting || isUploadingAttachment}
+              disabled={isSubmitting}
               onClick={() => handleDialogChange(false)}
             >
               Cancelar
             </Button>
-            <Button type="submit" disabled={isSubmitting || isUploadingAttachment}>
+            <Button type="submit" disabled={isSubmitting}>
               {isSubmitting && <Loader2 className="size-4 mr-2 animate-spin" />}
               {isEditing
                 ? 'Salvar Alterações'

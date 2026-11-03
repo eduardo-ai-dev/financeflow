@@ -16,7 +16,6 @@ export interface CalendarEventItem {
   type: CalendarEventType
   status: CalendarEventStatus
   color?: string | null
-  hasAttachment?: boolean
   transaction?: TransactionWithDetails
   invoice?: InvoiceWithTotals
 }
@@ -122,7 +121,6 @@ export function buildMonthlyCalendar({
       type: eventType,
       status,
       color: tx.category?.color || tx.account?.color || null,
-      hasAttachment: Boolean(tx.attachment),
       transaction: tx,
     })
   }

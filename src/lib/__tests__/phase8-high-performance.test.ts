@@ -1,13 +1,4 @@
 import { describe, it, expect } from 'vitest'
-import {
-  validateAttachmentFile,
-  sanitizeAttachmentFileName,
-  isValidUserAttachmentPath,
-  encodeTransactionNotesWithAttachment,
-  extractAttachmentFromNotes,
-  MAX_ATTACHMENT_SIZE_BYTES,
-} from '@/lib/validations/attachment'
-import { cleanUserNotes } from '@/lib/validations/installment'
 import { buildMonthlyCalendar } from '@/lib/calendar'
 import { buildFinancialAlerts } from '@/lib/alerts'
 import { parseBankStatementCsv } from '@/lib/csv-import'
@@ -18,7 +9,6 @@ import type { InvoiceWithTotals } from '@/services/invoices'
 import type { GoalWithStats } from '@/services/goals'
 
 const USER_ID = '11111111-2222-3333-4444-555555555555'
-const OTHER_USER_ID = '99999999-8888-7777-6666-555555555555'
 
 function makeTx(overrides: Partial<TransactionWithDetails>): TransactionWithDetails {
   return {
@@ -39,69 +29,6 @@ function makeTx(overrides: Partial<TransactionWithDetails>): TransactionWithDeta
     ...overrides,
   }
 }
-
-describe('Phase 8 — Validação e Segurança de Comprovantes', () => {
-  it('aceita PDF e imagens válidas até 5 MB e rejeita tipos/tamanhos inválidos', () => {
-    expect(
-      validateAttachmentFile({
-        name: 'boleto.pdf',
-        type: 'application/pdf',
-        size: 320_000,
-      })
-    ).toEqual({ valid: true })
-
-    expect(
-      validateAttachmentFile({
-        name: 'script.html',
-        type: 'text/html',
-        size: 1024,
-      }).valid
-    ).toBe(false)
-
-    expect(
-      validateAttachmentFile({
-        name: 'gigante.png',
-        type: 'image/png',
-        size: MAX_ATTACHMENT_SIZE_BYTES + 1,
-      }).valid
-    ).toBe(false)
-  })
-
-  it('sanitiza nomes de arquivos e bloqueia caminhos fora da pasta do usuário', () => {
-    const safe = sanitizeAttachmentFileName('../../Comprovante Pagamento (Novembro)!.PDF')
-    expect(safe).not.toContain('..')
-    expect(safe).not.toContain('/')
-    expect(safe.endsWith('.pdf')).toBe(true)
-
-    expect(
-      isValidUserAttachmentPath(`${USER_ID}/comprovantes/1700_nota.pdf`, USER_ID)
-    ).toBe(true)
-    expect(
-      isValidUserAttachmentPath(`${OTHER_USER_ID}/comprovantes/1700_nota.pdf`, USER_ID)
-    ).toBe(false)
-    expect(
-      isValidUserAttachmentPath(`${USER_ID}/../secret.pdf`, USER_ID)
-    ).toBe(false)
-  })
-
-  it('codifica, extrai e oculta o marcador interno de anexo das observações visíveis', () => {
-    const meta = {
-      path: `${USER_ID}/comprovantes/1700_recibo.png`,
-      name: 'Recibo Aluguel.png',
-      mime: 'image/png' as const,
-      size: 145_200,
-    }
-
-    const encoded = encodeTransactionNotesWithAttachment('Pago via PIX', meta)
-    expect(encoded).toContain('[ANEXO:')
-
-    const extracted = extractAttachmentFromNotes(encoded)
-    expect(extracted).toEqual(meta)
-
-    const userVisible = cleanUserNotes(encoded)
-    expect(userVisible).toBe('Pago via PIX')
-  })
-})
 
 describe('Phase 8 — Calendário Financeiro Mensal', () => {
   it('consolida receitas, contas, faturas e atrasos sem duplicar compras de cartão ou transferências', () => {

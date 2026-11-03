@@ -323,3 +323,4 @@ export function VaultDialog({ open, onOpenChange, vaultToEdit }: VaultDialogProp
     </Dialog>
   )
 }
+

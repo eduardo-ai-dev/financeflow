@@ -85,12 +85,12 @@ describe('Integridade da Navegação e Menu Retrátil (Sidebar Groups)', () => {
     ])
   })
 
-  it('deve mapear os 25 módulos sem rotas duplicadas', () => {
+  it('deve mapear os 24 módulos sem rotas duplicadas', () => {
     const allPaths = MODULE_GROUPS.flatMap((g) => g.items.map((i) => i.path))
-    expect(allPaths.length).toBe(25)
+    expect(allPaths.length).toBe(24)
 
     const uniquePaths = new Set(allPaths)
-    expect(uniquePaths.size).toBe(25)
+    expect(uniquePaths.size).toBe(24)
   })
 
   it('deve conter as novas rotas avançadas', () => {
@@ -101,7 +101,6 @@ describe('Integridade da Navegação e Menu Retrátil (Sidebar Groups)', () => {
     expect(allPaths).toContain('/dividas')
     expect(allPaths).toContain('/cofres')
     expect(allPaths).toContain('/simuladores')
-    expect(allPaths).toContain('/documentos')
     expect(allPaths).toContain('/notificacoes')
   })
 })

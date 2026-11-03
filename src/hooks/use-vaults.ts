@@ -125,3 +125,4 @@ export function useVaults() {
 }
 
 export type { VaultItem }
+

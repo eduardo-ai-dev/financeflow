@@ -43,7 +43,6 @@ const InvestimentosPage = lazy(() => import('@/pages/investimentos-page'))
 const PatrimonioPage = lazy(() => import('@/pages/patrimonio-page'))
 const DividasPage = lazy(() => import('@/pages/dividas-page'))
 const CofresPage = lazy(() => import('@/pages/cofres-page'))
-const DocumentosPage = lazy(() => import('@/pages/documentos-page'))
 
 const PlanejamentoPage = lazy(() => import('@/pages/planejamento-page'))
 const SimuladoresPage = lazy(() => import('@/pages/simuladores-page'))
@@ -95,7 +94,6 @@ function App() {
                 <Route path="/patrimonio" element={<PatrimonioPage />} />
                 <Route path="/dividas" element={<DividasPage />} />
                 <Route path="/cofres" element={<CofresPage />} />
-                <Route path="/documentos" element={<DocumentosPage />} />
 
                 {/* 4. Estratégia & Análise */}
                 <Route path="/planejamento" element={<PlanejamentoPage />} />

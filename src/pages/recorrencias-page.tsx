@@ -158,3 +158,4 @@ export default function RecorrenciasPage() {
     </div>
   )
 }
+

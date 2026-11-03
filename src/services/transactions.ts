@@ -4,11 +4,6 @@ import { getTodayDateString } from '@/lib/date'
 import type { Transaction, Account, Category } from '@/types/database'
 import type { TransactionFormData } from '@/lib/validations/transaction'
 import { cleanUserNotes } from '@/lib/validations/installment'
-import {
-  extractAttachmentFromNotes,
-  encodeTransactionNotesWithAttachment,
-  type AttachmentMeta,
-} from '@/lib/validations/attachment'
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/
@@ -25,7 +20,6 @@ export function sanitizeSearchTerm(raw: string): string {
 }
 
 export interface TransactionWithDetails extends Transaction {
-  attachment?: AttachmentMeta | null
   account?: Account | null
   to_account?: Account | null
   category?: Category | null
@@ -117,7 +111,6 @@ export async function fetchTransactions(
 
   return ((txRes.data || []) as Transaction[]).map((tx) => ({
     ...tx,
-    attachment: extractAttachmentFromNotes(tx.notes),
     notes: cleanUserNotes(tx.notes),
     account: tx.account_id ? accountsMap.get(tx.account_id) ?? null : null,
     to_account: tx.to_account_id ? accountsMap.get(tx.to_account_id) ?? null : null,
@@ -131,7 +124,7 @@ export async function createTransaction(data: TransactionFormData): Promise<Tran
   const isCompleted = data.status === 'completed'
 
   // user_id nunca é enviado pelo cliente; é preenchido no banco via JWT (auth.uid())
-  const encodedNotes = encodeTransactionNotesWithAttachment(data.notes, data.attachment)
+  const rawNotes = data.notes?.trim() || null
 
   const basePayload = {
     kind: data.kind,
@@ -143,7 +136,7 @@ export async function createTransaction(data: TransactionFormData): Promise<Tran
     category_id: isTransfer ? null : data.category_id || null,
     due_date: data.due_date,
     paid_date: isCompleted ? data.paid_date || data.due_date : null,
-    notes: encodedNotes,
+    notes: rawNotes,
   }
 
   const payloadWithClassification = {
@@ -190,8 +183,8 @@ export async function updateTransaction(
   if (data.amount !== undefined) payload.amount = data.amount
   if (data.account_id !== undefined) payload.account_id = data.account_id
   if (data.due_date !== undefined) payload.due_date = data.due_date
-  if (data.notes !== undefined || data.attachment !== undefined) {
-    payload.notes = encodeTransactionNotesWithAttachment(data.notes, data.attachment)
+  if (data.notes !== undefined) {
+    payload.notes = data.notes?.trim() || null
   }
 
   if (data.kind !== undefined) {

@@ -4,7 +4,6 @@ import { useTransactions, type TransactionWithDetails } from '@/hooks/use-transa
 import { useCards } from '@/hooks/use-cards'
 import { useInvoices } from '@/hooks/use-invoices'
 import { useProperties } from '@/hooks/use-properties'
-import { createReceiptSignedUrl } from '@/services/attachments'
 import {
   buildMonthlyCalendar,
   type CalendarEventItem,
@@ -29,10 +28,8 @@ import {
   CheckCircle2,
   Clock,
   AlertTriangle,
-  Paperclip,
   Edit2,
   Undo2,
-  Loader2,
   ArrowRight,
 } from 'lucide-react'
 
@@ -60,7 +57,6 @@ export default function CalendarioPage() {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [txToEdit, setTxToEdit] = useState<TransactionWithDetails | null>(null)
   const [txInitialKind, setTxInitialKind] = useState<'income' | 'expense'>('expense')
-  const [openingReceiptId, setOpeningReceiptId] = useState<string | null>(null)
 
   const isLoading = loadingTx || loadingCards || loadingInvoices || loadingProperties
 
@@ -143,19 +139,6 @@ export default function CalendarioPage() {
       await markAsPending(tx.id)
     } else {
       await markAsCompleted({ id: tx.id })
-    }
-  }
-
-  async function handleOpenAttachment(tx: TransactionWithDetails) {
-    if (!tx.attachment?.path) return
-    setOpeningReceiptId(tx.id)
-    try {
-      const url = await createReceiptSignedUrl(tx.attachment.path)
-      window.open(url, '_blank', 'noopener,noreferrer')
-    } catch {
-      // Silencioso
-    } finally {
-      setOpeningReceiptId(null)
     }
   }
 
@@ -657,23 +640,6 @@ export default function CalendarioPage() {
                           </button>
 
                           <div className="flex items-center gap-1">
-                            {ev.hasAttachment && (
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon"
-                                className="size-7 text-primary"
-                                disabled={openingReceiptId === ev.transaction.id}
-                                onClick={() => handleOpenAttachment(ev.transaction!)}
-                                title="Abrir comprovante"
-                              >
-                                {openingReceiptId === ev.transaction.id ? (
-                                  <Loader2 className="size-3.5 animate-spin" />
-                                ) : (
-                                  <Paperclip className="size-3.5" />
-                                )}
-                              </Button>
-                            )}
                             <Button
                               type="button"
                               variant="ghost"
