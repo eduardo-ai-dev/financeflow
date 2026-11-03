@@ -288,3 +288,4 @@ function formatCurrency(val: number): string {
     currency: 'BRL',
   }).format(val)
 }
+

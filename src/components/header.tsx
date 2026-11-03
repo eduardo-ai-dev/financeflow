@@ -2,11 +2,13 @@ import { useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import { getModuleByPath } from '@/config/modules'
 import { useAuth } from '@/hooks/use-auth'
+import { usePwa } from '@/hooks/use-pwa'
 import { ThemeToggle } from '@/components/theme-toggle'
 import { AlertsCenter } from '@/components/alerts-center'
 import { TransactionDialog } from '@/components/transaction-dialog'
+import { PwaInstallDialog } from '@/components/pwa-install-dialog'
 import { Button } from '@/components/ui/button'
-import { Menu, LogOut, Plus } from 'lucide-react'
+import { Menu, LogOut, Plus, Smartphone } from 'lucide-react'
 
 interface HeaderProps {
   onOpenMobileSidebar: () => void
@@ -15,7 +17,9 @@ interface HeaderProps {
 export function Header({ onOpenMobileSidebar }: HeaderProps) {
   const location = useLocation()
   const { user, profile, signOut } = useAuth()
+  const { isInstallable, isInstalled, isAppleDevice } = usePwa()
   const [transactionDialogOpen, setTransactionDialogOpen] = useState(false)
+  const [pwaDialogOpen, setPwaDialogOpen] = useState(false)
   const activeModule = getModuleByPath(location.pathname)
 
   const userInitial = profile?.full_name
@@ -51,6 +55,19 @@ export function Header({ onOpenMobileSidebar }: HeaderProps) {
 
       {/* Right side: Quick launch, Theme toggle, Profile avatar & Logout */}
       <div className="flex items-center gap-2.5 sm:gap-3">
+        {!isInstalled && (isInstallable || isAppleDevice) && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setPwaDialogOpen(true)}
+            className="h-8 text-xs font-semibold gap-1.5 border-primary/30 text-primary hover:bg-primary/10 hover:text-primary hidden sm:inline-flex"
+            title="Instalar FinanceFlow no celular ou computador"
+          >
+            <Smartphone className="size-3.5" />
+            <span>Instalar App</span>
+          </Button>
+        )}
+
         <Button
           size="sm"
           onClick={() => setTransactionDialogOpen(true)}
@@ -100,6 +117,10 @@ export function Header({ onOpenMobileSidebar }: HeaderProps) {
       <TransactionDialog
         open={transactionDialogOpen}
         onOpenChange={setTransactionDialogOpen}
+      />
+      <PwaInstallDialog
+        open={pwaDialogOpen}
+        onOpenChange={setPwaDialogOpen}
       />
     </header>
   )

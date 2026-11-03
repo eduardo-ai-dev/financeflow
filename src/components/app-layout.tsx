@@ -3,6 +3,7 @@ import { Outlet, useLocation } from 'react-router-dom'
 import { Sidebar } from '@/components/sidebar'
 import { Header } from '@/components/header'
 import { RouteErrorBoundary } from '@/components/route-error-boundary'
+import { MobileQuickAction } from '@/components/mobile-quick-action'
 import { Loader2 } from 'lucide-react'
 
 const SIDEBAR_STORAGE_KEY = 'financeflow-sidebar-collapsed'
@@ -69,6 +70,8 @@ export function AppLayout() {
             </Suspense>
           </RouteErrorBoundary>
         </main>
+
+        <MobileQuickAction />
       </div>
     </div>
   )

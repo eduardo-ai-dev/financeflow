@@ -1,0 +1,66 @@
+{
+  "id": "financeflow-pwa",
+  "name": "FinanceFlow — Gestão Financeira & Patrimonial",
+  "short_name": "FinanceFlow",
+  "description": "Plataforma completa de gestão financeira pessoal, fluxo de caixa, cartões, investimentos e controle patrimonial.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
+  "orientation": "portrait-primary",
+  "background_color": "#09090b",
+  "theme_color": "#10b981",
+  "lang": "pt-BR",
+  "dir": "ltr",
+  "categories": ["finance", "productivity", "utilities"],
+  "icons": [
+    {
+      "src": "/icons/icon-192.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-maskable-512.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Nova Despesa",
+      "short_name": "Despesa",
+      "description": "Registrar saída rápida de dinheiro",
+      "url": "/saidas?action=new",
+      "icons": [{ "src": "/icons/icon-192.svg", "sizes": "192x192" }]
+    },
+    {
+      "name": "Nova Receita",
+      "short_name": "Receita",
+      "description": "Registrar entrada rápida de dinheiro",
+      "url": "/entradas?action=new",
+      "icons": [{ "src": "/icons/icon-192.svg", "sizes": "192x192" }]
+    },
+    {
+      "name": "Calendário",
+      "short_name": "Agenda",
+      "description": "Vencimentos e faturas do mês",
+      "url": "/calendario",
+      "icons": [{ "src": "/icons/icon-192.svg", "sizes": "192x192" }]
+    },
+    {
+      "name": "Cofres & Reservas",
+      "short_name": "Cofres",
+      "description": "Consultar reservas e guardar dinheiro",
+      "url": "/cofres",
+      "icons": [{ "src": "/icons/icon-192.svg", "sizes": "192x192" }]
+    }
+  ]
+}

@@ -1,4 +1,5 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useTransactions, type TransactionWithDetails } from '@/hooks/use-transactions'
 import { useAccounts } from '@/hooks/use-accounts'
 import { useCategories } from '@/hooks/use-categories'
@@ -33,15 +34,24 @@ export default function SaidasPage() {
 
   const { accounts } = useAccounts()
   const { categoryTree } = useCategories()
+  const [searchParams, setSearchParams] = useSearchParams()
 
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<'all' | 'completed' | 'pending' | 'overdue'>('all')
   const [selectedAccountId, setSelectedAccountId] = useState<string>('all')
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>('all')
 
-  const [dialogOpen, setDialogOpen] = useState(false)
+  const [dialogOpen, setDialogOpen] = useState(() => searchParams.get('action') === 'new')
   const [csvImportOpen, setCsvImportOpen] = useState(false)
   const [transactionToEdit, setTransactionToEdit] = useState<TransactionWithDetails | null>(null)
+
+  useEffect(() => {
+    if (searchParams.get('action') === 'new') {
+      const nextParams = new URLSearchParams(searchParams)
+      nextParams.delete('action')
+      setSearchParams(nextParams, { replace: true })
+    }
+  }, [searchParams, setSearchParams])
 
   const expenseCategories = useMemo(() => categoryTree('expense'), [categoryTree])
 

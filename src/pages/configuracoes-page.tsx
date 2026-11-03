@@ -1,9 +1,11 @@
 import { useState } from 'react'
 import { useAuth } from '@/hooks/use-auth'
 import { useTheme } from '@/hooks/use-theme'
+import { usePwa } from '@/hooks/use-pwa'
 import { supabase } from '@/lib/supabase'
 import { getTodayDateString } from '@/lib/date'
 import { CsvImportDialog } from '@/components/csv-import-dialog'
+import { PwaInstallDialog } from '@/components/pwa-install-dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -17,11 +19,15 @@ import {
   LogOut,
   AlertTriangle,
   Loader2,
+  Smartphone,
+  CheckCircle2,
 } from 'lucide-react'
 
 export default function ConfiguracoesPage() {
   const { user, profile, signOut } = useAuth()
   const { theme, setTheme } = useTheme()
+  const { isInstalled, isAppleDevice } = usePwa()
+  const [pwaDialogOpen, setPwaDialogOpen] = useState(false)
 
   const [isExporting, setIsExporting] = useState(false)
   const [exportMessage, setExportMessage] = useState<string | null>(null)
@@ -178,6 +184,53 @@ export default function ConfiguracoesPage() {
         </div>
       </div>
 
+      {/* Aplicativo Móvel & Atalhos (PWA) */}
+      <div className="rounded-2xl border bg-card p-6 shadow-xs space-y-4">
+        <div className="flex items-center gap-2 pb-3 border-b">
+          <Smartphone className="size-5 text-primary" />
+          <div>
+            <h2 className="font-semibold text-base">Aplicativo no Celular & Computador (PWA)</h2>
+            <p className="text-xs text-muted-foreground">
+              Instale o FinanceFlow no seu smartphone ou desktop para lançar despesas em tempo real com agilidade nativa.
+            </p>
+          </div>
+        </div>
+
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-muted/20 p-4 rounded-xl">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <span className="font-medium text-sm">Status da Instalação:</span>
+              {isInstalled ? (
+                <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-full">
+                  <CheckCircle2 className="size-3.5" /> Instalado como App Nativo
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
+                  Navegador Web
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {isInstalled
+                ? 'Você está utilizando o FinanceFlow em modo standalone, com carregamento instantâneo e sem barras de navegação.'
+                : 'Instale na tela de início para ter acesso em 1 toque, atalhos rápidos de Nova Despesa e navegação fluida.'}
+            </p>
+          </div>
+
+          {!isInstalled && (
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => setPwaDialogOpen(true)}
+              className="gap-2 shrink-0 text-xs"
+            >
+              <Smartphone className="size-4" />
+              {isAppleDevice ? 'Instruções para iPhone' : 'Instalar Aplicativo'}
+            </Button>
+          )}
+        </div>
+      </div>
+
       {/* Exportação de Dados */}
       <div className="rounded-2xl border bg-card p-6 shadow-xs space-y-4">
         <div className="flex items-center gap-2 pb-3 border-b">
@@ -260,6 +313,7 @@ export default function ConfiguracoesPage() {
       </div>
 
       <CsvImportDialog open={csvImportOpen} onOpenChange={setCsvImportOpen} />
+      <PwaInstallDialog open={pwaDialogOpen} onOpenChange={setPwaDialogOpen} />
     </div>
   )
 }

@@ -144,3 +144,4 @@ describe('Estratégias de Quitação de Dívidas e Financiamentos', () => {
     expect(result.interestSaved).toBeGreaterThan(0)
   })
 })
+

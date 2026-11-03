@@ -22,3 +22,4 @@ exception
     raise notice 'Esquema de storage não disponível ou sem privilégios de alteração direta. Continuando com sucesso.';
 end;
 $$;
+

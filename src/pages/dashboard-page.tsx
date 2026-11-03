@@ -7,6 +7,7 @@ import { useTransactions } from '@/hooks/use-transactions'
 import { useCards } from '@/hooks/use-cards'
 import { useAlerts } from '@/hooks/use-alerts'
 import { KpiCard } from '@/components/kpi-card'
+import { CashFlowForecastWidget } from '@/components/cash-flow-forecast-widget'
 import { TransactionDialog } from '@/components/transaction-dialog'
 import { formatBRL } from '@/lib/money'
 import { formatDate, formatMonthYear } from '@/lib/date'
@@ -289,6 +290,9 @@ export default function DashboardPage() {
           />
         </div>
       </section>
+
+      {/* Previsão Preditiva de Fluxo de Caixa (30 / 60 dias) */}
+      <CashFlowForecastWidget />
 
       {/* Painel Operacional: Últimas Movimentações & Cartões de Crédito */}
       <section className="grid grid-cols-1 lg:grid-cols-5 gap-6">
